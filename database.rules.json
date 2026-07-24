@@ -1,5 +1,15 @@
 {
   "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        "username":    { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "displayName": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "createdAt":   { ".validate": "newData.val() <= now" },
+        "$other":      { ".validate": false }
+      }
+    },
     "encounters": {
       // Any signed-in staff device (anonymous auth) can read/write the board.
       ".read": "auth != null",

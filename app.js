@@ -4,12 +4,16 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth,
-  signInAnonymously,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+  signOut,
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getDatabase,
   ref,
+  set,
   push,
   update,
   query,
@@ -26,12 +30,29 @@ import { firebaseConfig } from "./firebase-config.js";
 // ---------------------------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 
-const setupScreen = $("setup-screen");
+// Turn a username into a synthetic email + turn a PIN into a valid password.
+// (Firebase requires a password >= 6 chars, so the PIN is peppered.)
+const EMAIL_DOMAIN = "edqc.app";
+const PIN_PEPPER = "#EDqc";
+const emailFor = (username) => username.toLowerCase() + "@" + EMAIL_DOMAIN;
+const passwordFor = (pin) => pin + PIN_PEPPER;
+
+const authScreen = $("auth-screen");
+const roleScreen = $("role-screen");
 const bedsideScreen = $("bedside-screen");
 const stationScreen = $("station-screen");
-const setupForm = $("setup-form");
-const clinicianInput = $("clinician-input");
-const setupStatus = $("setup-status");
+
+// Auth screen
+const authForm = $("auth-form");
+const authUser = $("auth-user");
+const authName = $("auth-name");
+const authPin = $("auth-pin");
+const authPin2 = $("auth-pin2");
+const authSubmit = $("auth-submit");
+const authStatus = $("auth-status");
+const fullnameWrap = $("fullname-wrap");
+const confirmWrap = $("confirm-wrap");
+const roleHello = $("role-hello");
 
 // Bedside
 const patientPicker = $("patient-picker");
@@ -67,8 +88,9 @@ const meStationEl = $("me-station");
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
-let clinician = localStorage.getItem("edqc_clinician") || "";
+let clinician = "";
 let role = localStorage.getItem("edqc_role") || "";
+let authMode = "signin"; // or "signup"
 let uid = null;
 let currentEncounterId = null; // bedside: which patient is being edited
 let selectedId = null; // station: which patient is shown
@@ -84,7 +106,7 @@ if (
   firebaseConfig.databaseURL.startsWith("REPLACE_ME")
 ) {
   configured = false;
-  setStatus(setupStatus, "⚠️ Firebase not configured — fill in firebase-config.js.", "error");
+  setStatus(authStatus, "⚠️ Firebase not configured — fill in firebase-config.js.", "error");
 }
 
 try {
@@ -94,37 +116,114 @@ try {
 } catch (err) {
   console.error(err);
   configured = false;
-  setStatus(setupStatus, "Failed to init Firebase: " + err.message, "error");
+  setStatus(authStatus, "Failed to init Firebase: " + err.message, "error");
 }
 
 // ---------------------------------------------------------------------------
-// Setup screen
+// Auth screen (username + PIN → Firebase Email/Password)
 // ---------------------------------------------------------------------------
-clinicianInput.value = clinician;
+
+// Prefill last-used username for convenience.
+authUser.value = localStorage.getItem("edqc_lastuser") || "";
 
 // Default role suggestion by screen size (user can still choose either).
 const suggestedRole = window.matchMedia("(max-width: 760px)").matches ? "bedside" : "station";
 
-document.querySelectorAll(".role-btn").forEach((btn) => {
-  if (btn.dataset.role === suggestedRole) btn.style.borderColor = "var(--primary)";
-  btn.addEventListener("click", () => {
-    const name = clinicianInput.value.trim();
-    if (!name) {
-      setStatus(setupStatus, "Please enter your name/initials first.", "error");
-      clinicianInput.focus();
-      return;
-    }
-    clinician = name;
-    role = btn.dataset.role;
-    localStorage.setItem("edqc_clinician", clinician);
-    localStorage.setItem("edqc_role", role);
-    start();
+// Tab switching (Sign in / Sign up)
+document.querySelectorAll(".tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    authMode = tab.dataset.tab;
+    document.querySelectorAll(".tab").forEach((t) =>
+      t.classList.toggle("active", t === tab)
+    );
+    const signup = authMode === "signup";
+    fullnameWrap.classList.toggle("hidden", !signup);
+    confirmWrap.classList.toggle("hidden", !signup);
+    authSubmit.textContent = signup ? "Create account" : "Sign in";
+    authPin.autocomplete = signup ? "new-password" : "current-password";
+    setStatus(authStatus, "");
   });
 });
 
-setupForm.addEventListener("submit", (e) => e.preventDefault());
+authForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!configured) return;
 
-// Device role switch buttons
+  const username = authUser.value.trim();
+  const pin = authPin.value.trim();
+
+  if (!/^[a-zA-Z0-9._-]{3,20}$/.test(username)) {
+    return setStatus(authStatus, "Username: 3–20 letters, numbers, . _ - only.", "error");
+  }
+  if (!/^\d{4,8}$/.test(pin)) {
+    return setStatus(authStatus, "PIN must be 4–8 digits.", "error");
+  }
+
+  authSubmit.disabled = true;
+
+  try {
+    if (authMode === "signup") {
+      if (pin !== authPin2.value.trim()) {
+        throw { code: "custom/pin-mismatch" };
+      }
+      setStatus(authStatus, "Creating account…");
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        emailFor(username),
+        passwordFor(pin)
+      );
+      const displayName = authName.value.trim() || username;
+      await updateProfile(cred.user, { displayName });
+      // Store a small profile record (best-effort).
+      set(ref(db, "users/" + cred.user.uid), {
+        username: username,
+        displayName: displayName,
+        createdAt: serverTimestamp(),
+      }).catch(() => {});
+    } else {
+      setStatus(authStatus, "Signing in…");
+      await signInWithEmailAndPassword(auth, emailFor(username), passwordFor(pin));
+    }
+    localStorage.setItem("edqc_lastuser", username);
+    // onAuthStateChanged takes over from here.
+  } catch (err) {
+    console.error(err);
+    setStatus(authStatus, authErrorMessage(err), "error");
+    authSubmit.disabled = false;
+  }
+});
+
+function authErrorMessage(err) {
+  switch (err.code) {
+    case "custom/pin-mismatch":
+      return "PINs do not match.";
+    case "auth/email-already-in-use":
+      return "That username is already taken. Try signing in.";
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+      return "Wrong username or PIN.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Wait a moment and try again.";
+    case "auth/operation-not-allowed":
+      return "Email/Password sign-in is not enabled in Firebase.";
+    case "auth/network-request-failed":
+      return "Network error — check your connection.";
+    default:
+      return "Sign-in failed: " + (err.code || err.message || "unknown");
+  }
+}
+
+// Role picker + device switch buttons
+document.querySelectorAll(".role-btn").forEach((btn) => {
+  if (btn.dataset.role === suggestedRole) btn.style.borderColor = "var(--primary)";
+  btn.addEventListener("click", () => {
+    role = btn.dataset.role;
+    localStorage.setItem("edqc_role", role);
+    showRole();
+  });
+});
+
 document.querySelectorAll("[data-switch]").forEach((btn) => {
   btn.addEventListener("click", () => {
     role = btn.dataset.switch;
@@ -133,39 +232,66 @@ document.querySelectorAll("[data-switch]").forEach((btn) => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Auth + start
-// ---------------------------------------------------------------------------
-function start() {
-  if (!configured) return;
-  setStatus(setupStatus, "Connecting…");
-  signInAnonymously(auth).catch((err) => {
-    console.error(err);
-    setStatus(setupStatus, "Sign-in failed: " + (err.code || err.message), "error");
+// Sign out
+document.querySelectorAll("[data-signout]").forEach((btn) => {
+  btn.addEventListener("click", async () => {
+    await signOut(auth);
+    role = "";
+    localStorage.removeItem("edqc_role");
   });
-}
+});
 
-// Auto-start if we already know the role from a previous session.
-if (clinician && role && configured) start();
-
+// ---------------------------------------------------------------------------
+// Auth state → drive which screen shows
+// ---------------------------------------------------------------------------
 onAuthStateChanged(auth, (user) => {
   const online = !!user;
   dotBedside.classList.toggle("online", online);
   dotStation.classList.toggle("online", online);
+
   if (user) {
     uid = user.uid;
+    clinician = user.displayName || (user.email || "").split("@")[0] || "Clinician";
     subscribe();
-    showRole();
+    if (role === "bedside" || role === "station") {
+      showRole();
+    } else {
+      showRoleScreen();
+    }
+  } else {
+    uid = null;
+    clinician = "";
+    authSubmit.disabled = false;
+    authPin.value = "";
+    if (authPin2) authPin2.value = "";
+    hideAll();
+    authScreen.classList.remove("hidden");
   }
 });
+
+function hideAll() {
+  authScreen.classList.add("hidden");
+  roleScreen.classList.add("hidden");
+  bedsideScreen.classList.add("hidden");
+  stationScreen.classList.add("hidden");
+}
+
+function showRoleScreen() {
+  hideAll();
+  roleHello.textContent = clinician;
+  roleScreen.classList.remove("hidden");
+}
 
 function showRole() {
   meBedside.textContent = clinician;
   meStationEl.textContent = clinician;
-  setupScreen.classList.add("hidden");
-  bedsideScreen.classList.toggle("hidden", role !== "bedside");
-  stationScreen.classList.toggle("hidden", role !== "station");
-  if (role === "bedside") fBed.focus();
+  hideAll();
+  if (role === "bedside") {
+    bedsideScreen.classList.remove("hidden");
+    fBed.focus();
+  } else {
+    stationScreen.classList.remove("hidden");
+  }
 }
 
 // ---------------------------------------------------------------------------

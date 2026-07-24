@@ -34,6 +34,14 @@ static site on **[Render.com](https://render.com)**. No build step, no server.
   when updated. Click one to see the compiled note, **📋 Copy for EMR**, then
   **✓ Mark recorded** to clear it from the board.
 
+## Accounts
+
+- **Username + PIN** login with a **Sign up** option, backed by Firebase Auth.
+- Under the hood, usernames map to `username@edqc.app` (Firebase Email/Password);
+  the 4–8 digit PIN is the password (padded to meet Firebase's minimum length).
+- Login persists across refreshes, and your display name is stamped on every note.
+- A PIN is **convenience-grade** security — see the privacy note below.
+
 ## Features
 
 - Real-time bedside → station sync (no refresh, no retyping)
@@ -56,7 +64,9 @@ static site on **[Render.com](https://render.com)**. No build step, no server.
 
 ## 1. Firebase setup (project `emrtemplate`)
 
-1. **Enable Anonymous Auth** — Authentication → Sign-in method → enable **Anonymous**.
+1. **Enable Email/Password Auth** — Authentication → Sign-in method → enable
+   **Email/Password**. (Usernames are mapped to `username@edqc.app` internally;
+   the PIN is the password.)
    <https://console.firebase.google.com/project/emrtemplate/authentication/providers>
 2. **Create a Realtime Database** — Build → Realtime Database → Create Database (locked mode).
    <https://console.firebase.google.com/project/emrtemplate/database>

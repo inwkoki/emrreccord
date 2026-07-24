@@ -9,25 +9,52 @@
 </head>
 <body>
   <div id="app">
-    <!-- ================= SETUP ================= -->
-    <section id="setup-screen" class="screen center">
+    <!-- ================= AUTH ================= -->
+    <section id="auth-screen" class="screen center">
       <div class="card">
         <h1>🩺 ED QuickCapture</h1>
-        <p class="subtitle">Type at the bedside on your phone → it pops up at the station to record into the EMR. No retyping.</p>
+        <p class="subtitle">Sign in with your ED account to keep your patient notes.</p>
 
-        <form id="setup-form">
-          <label class="lbl">Your name / initials</label>
-          <input id="clinician-input" type="text" placeholder="e.g. Dr. Koki / JK" maxlength="40" autocomplete="off" required />
+        <div class="tabs">
+          <button type="button" class="tab active" data-tab="signin">Sign in</button>
+          <button type="button" class="tab" data-tab="signup">Sign up</button>
+        </div>
 
-          <label class="lbl">This device is a…</label>
-          <div class="role-picker">
-            <button type="button" class="role-btn" data-role="bedside">📱<br />Bedside<br /><small>phone entry</small></button>
-            <button type="button" class="role-btn" data-role="station">🖥️<br />Station<br /><small>record into EMR</small></button>
+        <form id="auth-form" autocomplete="off">
+          <label class="lbl">Username</label>
+          <input id="auth-user" type="text" placeholder="e.g. drkoki" maxlength="20" autocomplete="username" required />
+
+          <div id="fullname-wrap" class="hidden">
+            <label class="lbl">Display name <small class="muted">(shown on notes)</small></label>
+            <input id="auth-name" type="text" placeholder="e.g. Dr. Koki / JK" maxlength="40" autocomplete="off" />
           </div>
-          <p id="setup-status" class="status"></p>
-        </form>
 
-        <p class="disclaimer">⚠️ Prototype only — <b>not</b> a certified/HIPAA·PDPA-compliant EMR. Do not enter real identifiable patient data until properly secured. Use bed numbers, not names.</p>
+          <label class="lbl">PIN <small class="muted">(4–8 digits)</small></label>
+          <input id="auth-pin" type="password" inputmode="numeric" pattern="\d*" placeholder="••••" maxlength="8" autocomplete="current-password" required />
+
+          <div id="confirm-wrap" class="hidden">
+            <label class="lbl">Confirm PIN</label>
+            <input id="auth-pin2" type="password" inputmode="numeric" pattern="\d*" placeholder="••••" maxlength="8" autocomplete="new-password" />
+          </div>
+
+          <button id="auth-submit" type="submit" class="primary">Sign in</button>
+        </form>
+        <p id="auth-status" class="status"></p>
+
+        <p class="disclaimer">⚠️ Prototype only — <b>not</b> a certified/HIPAA·PDPA-compliant EMR. Do not enter real identifiable patient data until properly secured. Use bed numbers, not names. A PIN is convenience-grade security only.</p>
+      </div>
+    </section>
+
+    <!-- ================= ROLE PICKER ================= -->
+    <section id="role-screen" class="screen center hidden">
+      <div class="card">
+        <h1>Hi <span id="role-hello"></span> 👋</h1>
+        <p class="subtitle">What is this device?</p>
+        <div class="role-picker">
+          <button type="button" class="role-btn" data-role="bedside">📱<br />Bedside<br /><small>phone entry</small></button>
+          <button type="button" class="role-btn" data-role="station">🖥️<br />Station<br /><small>record into EMR</small></button>
+        </div>
+        <button type="button" class="ghost-btn full" data-signout>Sign out</button>
       </div>
     </section>
 
@@ -35,7 +62,10 @@
     <section id="bedside-screen" class="screen hidden">
       <header class="topbar">
         <div><span class="dot" id="dot-bedside"></span> 📱 Bedside — <span id="me-bedside"></span></div>
-        <button class="ghost-btn" data-switch="station">🖥️ Station</button>
+        <div class="topbar-right">
+          <button class="ghost-btn" data-switch="station">🖥️ Station</button>
+          <button class="ghost-btn" data-signout>Sign out</button>
+        </div>
       </header>
 
       <main class="bedside-body">
@@ -76,6 +106,7 @@
         <div class="topbar-right">
           <span id="me-station" class="muted"></span>
           <button class="ghost-btn" data-switch="bedside">📱 Bedside</button>
+          <button class="ghost-btn" data-signout>Sign out</button>
         </div>
       </header>
 

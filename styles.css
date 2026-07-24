@@ -156,6 +156,35 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* ---------- Auth tabs ---------- */
+.tabs {
+  display: flex;
+  gap: 6px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 6px;
+}
+
+.tab {
+  flex: 1;
+  background: transparent;
+  color: var(--muted);
+  padding: 9px;
+  border-radius: 8px;
+}
+
+.tab.active {
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(2, 6, 23, 0.1);
+}
+
+.full {
+  width: 100%;
+  margin-top: 16px;
+}
+
 /* ---------- Role picker ---------- */
 .role-picker {
   display: grid;
