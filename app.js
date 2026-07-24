@@ -174,6 +174,12 @@ authForm.addEventListener("submit", async (e) => {
       );
       const displayName = authName.value.trim() || username;
       await updateProfile(cred.user, { displayName });
+      // onAuthStateChanged may have already fired with a null displayName —
+      // refresh the cached name and any visible labels.
+      clinician = displayName;
+      roleHello.textContent = clinician;
+      meBedside.textContent = clinician;
+      meStationEl.textContent = clinician;
       // Store a small profile record (best-effort).
       set(ref(db, "users/" + cred.user.uid), {
         username: username,
@@ -288,9 +294,11 @@ function showRole() {
   hideAll();
   if (role === "bedside") {
     bedsideScreen.classList.remove("hidden");
+    renderPatientOptions();
     fBed.focus();
   } else {
     stationScreen.classList.remove("hidden");
+    renderStation();
   }
 }
 
