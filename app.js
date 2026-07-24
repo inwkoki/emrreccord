@@ -447,6 +447,29 @@ document.querySelectorAll("[data-mgmt]").forEach((btn) => {
   btn.addEventListener("click", () => addMgmtLine(btn.dataset.mgmt));
 });
 
+// Underlying-disease chips — maintain a single deduped "Underlying: ..." line
+// at the top of the history field, preserving whatever else was typed.
+const UD_PREFIX = "Underlying: ";
+function addUnderlying(token) {
+  const lines = fHistory.value.split("\n");
+  const idx = lines.findIndex((l) => l.startsWith(UD_PREFIX));
+  if (idx === -1) {
+    lines.unshift(UD_PREFIX + token);
+  } else {
+    const items = lines[idx]
+      .slice(UD_PREFIX.length)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!items.includes(token)) items.push(token);
+    lines[idx] = UD_PREFIX + items.join(", ");
+  }
+  fHistory.value = lines.join("\n");
+}
+document.querySelectorAll("[data-ud]").forEach((btn) => {
+  btn.addEventListener("click", () => addUnderlying(btn.dataset.ud));
+});
+
 // Septic work-up bundle (a set of management lines).
 const SEPTIC_WORKUP = [
   "IV access x2; O2 to keep SpO2 >= 94%",

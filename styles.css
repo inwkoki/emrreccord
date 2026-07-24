@@ -149,6 +149,13 @@ body {
   margin-bottom: 8px;
 }
 
+.ud-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  align-self: center;
+}
+
 /* Vital signs grid */
 .vitals-grid {
   display: grid;
