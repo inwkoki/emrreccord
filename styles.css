@@ -106,6 +106,79 @@ body {
   color: #fff;
 }
 
+.chip.mini {
+  font-size: 12px;
+  padding: 4px 9px;
+  margin: 0;
+}
+
+.chip.cond {
+  font-size: 13px;
+  padding: 5px 11px;
+  margin: 0;
+}
+
+.chip.set {
+  border-style: dashed;
+}
+
+/* Condition template bar */
+.tpl-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 4px;
+  padding: 10px;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  border-radius: 10px;
+}
+
+.tpl-bar-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* Chip rows (management / fluid quick-picks) */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+/* Vital signs grid */
+.vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.vital {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.vital span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.vital input {
+  padding: 9px 10px;
+  text-align: center;
+}
+
+@media (max-width: 420px) {
+  .vitals-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 input,
 textarea,
 select {

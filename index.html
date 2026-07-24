@@ -76,6 +76,14 @@
           <span id="sent-note" class="sent-note"></span>
         </div>
 
+        <!-- Condition quick-templates -->
+        <div class="tpl-bar">
+          <span class="tpl-bar-label">Quick template:</span>
+          <button type="button" class="chip cond" data-cond="sepsis">🦠 Sepsis</button>
+          <button type="button" class="chip cond" data-cond="stroke">🧠 Stroke</button>
+          <button type="button" class="chip cond" data-cond="trauma">🚑 Trauma</button>
+        </div>
+
         <label class="lbl">Bed / identifier <span class="req">*</span></label>
         <input id="f-bed" type="text" placeholder="e.g. Bed 12 / Trolley A" maxlength="40" autocomplete="off" />
 
@@ -83,15 +91,96 @@
         <textarea id="f-complaint" rows="2" placeholder="e.g. Chest pain 2h, radiating to left arm"></textarea>
 
         <label class="lbl">History (HPI / PMH / meds / allergies)</label>
-        <textarea id="f-history" rows="4" placeholder="Onset, associated sx, past history, meds, allergies…"></textarea>
+        <textarea id="f-history" rows="3" placeholder="Onset, associated sx, past history, meds, allergies…"></textarea>
+
+        <!-- Vital signs -->
+        <label class="lbl">Vital signs</label>
+        <div class="vitals-grid">
+          <div class="vital"><span>BP</span><input id="v-bp" type="text" inputmode="text" placeholder="120/80" maxlength="12" /></div>
+          <div class="vital"><span>HR</span><input id="v-hr" type="text" inputmode="numeric" placeholder="80" maxlength="4" /></div>
+          <div class="vital"><span>RR</span><input id="v-rr" type="text" inputmode="numeric" placeholder="18" maxlength="4" /></div>
+          <div class="vital"><span>SpO₂</span><input id="v-spo2" type="text" inputmode="numeric" placeholder="98%" maxlength="6" /></div>
+          <div class="vital"><span>Temp</span><input id="v-temp" type="text" inputmode="decimal" placeholder="37.0" maxlength="6" /></div>
+          <div class="vital"><span>GCS</span><input id="v-gcs" type="text" inputmode="text" placeholder="15" maxlength="12" /></div>
+        </div>
+
+        <label class="lbl">O₂ device</label>
+        <select id="f-oxygen">
+          <option value="">— none / room air —</option>
+          <option>Room air</option>
+          <option>Nasal cannula</option>
+          <option>Simple face mask</option>
+          <option>Non-rebreather mask</option>
+          <option>High-flow nasal cannula</option>
+          <option>NIV (BiPAP / CPAP)</option>
+          <option>Intubated / ventilator</option>
+        </select>
 
         <label class="lbl">Physical exam
-          <button type="button" id="tpl-exam" class="chip">＋ Normal template</button>
+          <button type="button" id="tpl-exam" class="chip">＋ Normal</button>
         </label>
         <textarea id="f-exam" rows="7" placeholder="Vitals, general, CVS, resp, abdo, neuro…"></textarea>
 
         <label class="lbl">Bedside test</label>
-        <textarea id="f-bedside" rows="3" placeholder="ECG, POCUS, CBG, VBG, urine dip, ketones…"></textarea>
+        <textarea id="f-bedside" rows="2" placeholder="ECG, POCUS, CBG, VBG, urine dip, ketones…"></textarea>
+
+        <!-- Initial management -->
+        <label class="lbl">Initial management</label>
+        <div class="chip-row" id="mgmt-chips">
+          <button type="button" class="chip mini" data-mgmt="IV access">IV access</button>
+          <button type="button" class="chip mini" data-mgmt="Cardiac monitor + SpO2">Monitor</button>
+          <button type="button" class="chip mini" data-mgmt="CBC, BUN/Cr, electrolytes">Labs</button>
+          <button type="button" class="chip mini" data-mgmt="Lactate">Lactate</button>
+          <button type="button" class="chip mini" data-mgmt="Hemoculture x2">H/C x2</button>
+          <button type="button" class="chip mini" data-mgmt="ABG / VBG">ABG/VBG</button>
+          <button type="button" class="chip mini" data-mgmt="12-lead ECG">ECG</button>
+          <button type="button" class="chip mini" data-mgmt="Chest X-ray">CXR</button>
+          <button type="button" class="chip mini" data-mgmt="NPO">NPO</button>
+          <button type="button" class="chip mini" data-mgmt="Foley catheter">Foley</button>
+          <button type="button" class="chip mini set" data-mgmt-set="septic">＋ Septic work-up</button>
+        </div>
+        <textarea id="f-management" rows="4" placeholder="Orders / interventions given…"></textarea>
+
+        <label class="lbl">Antibiotic given</label>
+        <input id="f-antibiotic" type="text" placeholder="drug · dose · route · time (per local protocol)" maxlength="200" />
+
+        <label class="lbl">IV fluid
+          <button type="button" class="chip mini" data-fluid="NSS 1000 ml IV">NSS</button>
+          <button type="button" class="chip mini" data-fluid="Acetar / RLS 1000 ml IV">RLS</button>
+          <button type="button" class="chip mini" data-fluid="NSS 30 ml/kg IV bolus, reassess">Bolus</button>
+        </label>
+        <input id="f-fluid" type="text" placeholder="fluid type · volume · rate" maxlength="120" />
+
+        <label class="lbl">Consultation</label>
+        <select id="f-consult">
+          <option value="">— none —</option>
+          <option>Internal Medicine</option>
+          <option>General Surgery</option>
+          <option>Orthopedics</option>
+          <option>Neurology</option>
+          <option>Neurosurgery</option>
+          <option>Cardiology</option>
+          <option>OB-GYN</option>
+          <option>Pediatrics</option>
+          <option>ENT</option>
+          <option>Ophthalmology</option>
+          <option>Urology</option>
+          <option>Psychiatry</option>
+          <option>ICU / Critical care</option>
+        </select>
+
+        <label class="lbl">Disposition</label>
+        <select id="f-disposition">
+          <option value="">— pending —</option>
+          <option>Admit — ward</option>
+          <option>Admit — ICU</option>
+          <option>Observe in ED</option>
+          <option>To operating room</option>
+          <option>Refer out</option>
+          <option>Discharge home</option>
+          <option>Against medical advice</option>
+          <option>Deceased</option>
+        </select>
 
         <div class="bedside-actions">
           <button id="send-btn" class="primary">⬆️ Send to station</button>

@@ -61,6 +61,18 @@ const fComplaint = $("f-complaint");
 const fHistory = $("f-history");
 const fExam = $("f-exam");
 const fBedside = $("f-bedside");
+const vBp = $("v-bp");
+const vHr = $("v-hr");
+const vRr = $("v-rr");
+const vSpo2 = $("v-spo2");
+const vTemp = $("v-temp");
+const vGcs = $("v-gcs");
+const fOxygen = $("f-oxygen");
+const fManagement = $("f-management");
+const fAntibiotic = $("f-antibiotic");
+const fFluid = $("f-fluid");
+const fConsult = $("f-consult");
+const fDisposition = $("f-disposition");
 const sendBtn = $("send-btn");
 const newBtn = $("new-btn");
 const bedsideStatus = $("bedside-status");
@@ -342,25 +354,39 @@ patientPicker.addEventListener("change", () => {
   loadIntoForm(id);
 });
 
+// All bedside text fields mapped to their encounter keys, so load/clear/send
+// can iterate instead of repeating every field.
+const FIELD_MAP = {
+  bed: fBed,
+  complaint: fComplaint,
+  history: fHistory,
+  vBp: vBp,
+  vHr: vHr,
+  vRr: vRr,
+  vSpo2: vSpo2,
+  vTemp: vTemp,
+  vGcs: vGcs,
+  oxygen: fOxygen,
+  exam: fExam,
+  bedside: fBedside,
+  management: fManagement,
+  antibiotic: fAntibiotic,
+  fluid: fFluid,
+  consult: fConsult,
+  disposition: fDisposition,
+};
+
 function loadIntoForm(id) {
   const e = encounters[id];
   if (!e) return;
   currentEncounterId = id;
-  fBed.value = e.bed || "";
-  fComplaint.value = e.complaint || "";
-  fHistory.value = e.history || "";
-  fExam.value = e.exam || "";
-  fBedside.value = e.bedside || "";
+  for (const [key, el] of Object.entries(FIELD_MAP)) el.value = e[key] || "";
   sentNote.textContent = "loaded";
 }
 
 function clearForm() {
   currentEncounterId = null;
-  fBed.value = "";
-  fComplaint.value = "";
-  fHistory.value = "";
-  fExam.value = "";
-  fBedside.value = "";
+  for (const el of Object.values(FIELD_MAP)) el.value = "";
   sentNote.textContent = "";
   patientPicker.value = "";
   fBed.focus();
@@ -368,8 +394,20 @@ function clearForm() {
 
 newBtn.addEventListener("click", clearForm);
 
-// Quick "normal" physical-exam template. Fills the field if empty, otherwise
-// appends on a new line so a partly-typed exam is not lost.
+// --- Field template helpers ---------------------------------------------
+// Append a block to a textarea (blank line between existing + new).
+function appendText(el, text) {
+  const cur = el.value.trim();
+  el.value = cur ? cur + "\n" + text : text;
+}
+// Append a single "- item" line only if it is not already present.
+function addMgmtLine(item) {
+  const line = "- " + item;
+  if (fManagement.value.includes(line)) return;
+  appendText(fManagement, line);
+}
+
+// Normal physical-exam template.
 const NORMAL_PE = [
   "HEENT: no pale conjunctiva, anicteric sclera",
   "Lung: clear and equal breath sounds both lungs",
@@ -379,9 +417,128 @@ const NORMAL_PE = [
 ].join("\n");
 
 document.getElementById("tpl-exam").addEventListener("click", () => {
-  const cur = fExam.value.trim();
-  fExam.value = cur ? cur + "\n" + NORMAL_PE : NORMAL_PE;
+  appendText(fExam, NORMAL_PE);
   fExam.focus();
+});
+
+// Management quick-pick chips.
+document.querySelectorAll("[data-mgmt]").forEach((btn) => {
+  btn.addEventListener("click", () => addMgmtLine(btn.dataset.mgmt));
+});
+
+// Septic work-up bundle (a set of management lines).
+const SEPTIC_WORKUP = [
+  "IV access x2; O2 to keep SpO2 >= 94%",
+  "Hemoculture x2 (before antibiotics)",
+  "CBC, BUN/Cr, electrolytes, LFT, coagulogram",
+  "Lactate (repeat if >= 2)",
+  "Urinalysis + urine culture; consider CXR",
+  "IV fluid resuscitation (see fluid)",
+  "Antibiotics within 1 hr (see antibiotic)",
+  "Identify & control source: ___",
+];
+document.querySelectorAll("[data-mgmt-set='septic']").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    if (!fManagement.value.includes("[Septic work-up]")) {
+      appendText(fManagement, "[Septic work-up]");
+    }
+    SEPTIC_WORKUP.forEach(addMgmtLine);
+  });
+});
+
+// IV-fluid quick chips.
+document.querySelectorAll("[data-fluid]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    fFluid.value = btn.dataset.fluid;
+  });
+});
+
+// --- Condition templates (sepsis / stroke / trauma) ---------------------
+const CONDITION_TEMPLATES = {
+  sepsis: () => {
+    document.querySelector("[data-mgmt-set='septic']").click();
+    if (!fFluid.value.trim()) fFluid.value = "NSS/RLS 30 ml/kg IV bolus, reassess";
+    if (!fOxygen.value) fOxygen.value = "Nasal cannula";
+    fAntibiotic.focus(); // prompt clinician to record the antibiotic given
+  },
+  stroke: () => {
+    appendText(
+      fExam,
+      [
+        "[Stroke / neuro assessment]",
+        "Last known well: ___    Onset: ___",
+        "GCS: E_V_M_    Pupils: R__ L__",
+        "NIHSS total: ___",
+        "- LOC / orientation / commands: ___",
+        "- Best gaze / visual fields: ___",
+        "- Facial palsy: ___",
+        "- Motor arm   R: ___   L: ___",
+        "- Motor leg   R: ___   L: ___",
+        "- Limb ataxia: ___",
+        "- Sensory: ___",
+        "- Language / dysarthria: ___",
+        "- Extinction / neglect: ___",
+        "Capillary blood glucose: ___",
+      ].join("\n")
+    );
+    appendText(
+      fManagement,
+      [
+        "[Stroke fast-track]",
+        "- NPO; head of bed 30°",
+        "- CT brain non-contrast STAT (± CTA)",
+        "- Capillary glucose; correct if abnormal",
+        "- BP monitoring (avoid over-correction)",
+        "- Screen thrombolysis / thrombectomy eligibility",
+        "- Notify stroke team; document onset/LKW time",
+      ].join("\n")
+    );
+  },
+  trauma: () => {
+    const t = nowTime();
+    appendText(
+      fExam,
+      [
+        "[Primary survey — ABCDE]",
+        "A (airway + C-spine control): ___",
+        "B (breathing, RR, chest, SpO2): ___",
+        "C (circulation, pulses, external bleeding): ___",
+        "D (disability, GCS __, pupils R__ L__): ___",
+        "E (exposure, temp, log-roll / back): ___",
+        "",
+        "[EFAST]",
+        "- Pericardial: ___",
+        "- RUQ (Morison's pouch): ___",
+        "- LUQ (splenorenal): ___",
+        "- Pelvis / pouch of Douglas: ___",
+        "- Lung sliding   R: ___   L: ___",
+        "",
+        "[Secondary survey / AMPLE Hx]: ___",
+      ].join("\n")
+    );
+    appendText(
+      fManagement,
+      [
+        "[Trauma resuscitation]",
+        "- Time of arrival: " + t + "   Primary survey: " + t,
+        "- 2 large-bore IV; trauma labs + group & cross-match",
+        "- Control external hemorrhage; C-collar / immobilization",
+        "- Analgesia; tetanus prophylaxis as indicated",
+        "- Imaging: trauma series / CT as indicated",
+        "- Activate massive transfusion protocol if needed",
+      ].join("\n")
+    );
+  },
+};
+
+document.querySelectorAll("[data-cond]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const fn = CONDITION_TEMPLATES[btn.dataset.cond];
+    if (fn) {
+      fn();
+      setStatus(bedsideStatus, "Inserted " + btn.dataset.cond + " template.", "ok");
+    }
+  });
 });
 
 sendBtn.addEventListener("click", async () => {
@@ -393,16 +550,10 @@ sendBtn.addEventListener("click", async () => {
   }
   if (!uid) return;
 
-  const payload = {
-    bed,
-    complaint: fComplaint.value.trim(),
-    history: fHistory.value.trim(),
-    exam: fExam.value.trim(),
-    bedside: fBedside.value.trim(),
-    by: clinician,
-    status: "active",
-    updatedAt: serverTimestamp(),
-  };
+  const payload = { by: clinician, status: "active", updatedAt: serverTimestamp() };
+  for (const [key, el] of Object.entries(FIELD_MAP)) {
+    payload[key] = el.value.trim();
+  }
 
   sendBtn.disabled = true;
   setStatus(bedsideStatus, "Sending…");
@@ -528,10 +679,34 @@ function formatNote(e) {
   parts.push("PATIENT: " + (e.bed || "(no bed)"));
   if (e.complaint) parts.push("\nCHIEF COMPLAINT:\n" + e.complaint);
   if (e.history) parts.push("\nHISTORY:\n" + e.history);
+
+  const vit = vitalsLine(e);
+  if (vit) parts.push("\nVITALS:\n" + vit);
+
   if (e.exam) parts.push("\nPHYSICAL EXAM:\n" + e.exam);
   if (e.bedside) parts.push("\nBEDSIDE TESTS:\n" + e.bedside);
+  if (e.management) parts.push("\nINITIAL MANAGEMENT:\n" + e.management);
+  if (e.fluid) parts.push("\nIV FLUID:\n" + e.fluid);
+  if (e.antibiotic) parts.push("\nANTIBIOTIC:\n" + e.antibiotic);
+  if (e.consult) parts.push("\nCONSULTATION: " + e.consult);
+  if (e.disposition) parts.push("\nDISPOSITION: " + e.disposition);
+
   parts.push("\n— Entered by " + (e.by || "unknown") + " · " + fullTime(e.updatedAt));
   return parts.join("\n");
+}
+
+// Build a single vitals line from whichever vitals were entered.
+function vitalsLine(e) {
+  const bits = [];
+  if (e.vBp) bits.push("BP " + e.vBp);
+  if (e.vHr) bits.push("HR " + e.vHr);
+  if (e.vRr) bits.push("RR " + e.vRr);
+  if (e.vSpo2) bits.push("SpO2 " + e.vSpo2);
+  if (e.vTemp) bits.push("T " + e.vTemp);
+  if (e.vGcs) bits.push("GCS " + e.vGcs);
+  let line = bits.join(", ");
+  if (e.oxygen) line += (line ? "  |  " : "") + "O2: " + e.oxygen;
+  return line;
 }
 
 // ---------------------------------------------------------------------------
