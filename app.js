@@ -482,6 +482,48 @@ const CONDITION_TEMPLATES = {
     if (!fOxygen.value) fOxygen.value = "Nasal cannula";
     fAntibiotic.focus(); // prompt clinician to record the antibiotic given
   },
+  chestpain: () => {
+    const t = nowTime();
+    appendText(
+      fBedside,
+      [
+        "[Serial ECG]",
+        "ECG #1 (" + t + "): rate/rhythm ___ , axis ___ , ST-segment ___ , T-wave ___",
+        "ECG #2 (____): rate/rhythm ___ , ST-segment ___ (compare to #1)",
+        "ECG #3 (____): ___",
+      ].join("\n")
+    );
+    appendText(
+      fManagement,
+      [
+        "[Chest pain / ACS work-up]",
+        "- 12-lead ECG within 10 min of arrival; serial ECG (see bedside test)",
+        "- Cardiac troponin (serial) + CBC, BUN/Cr, electrolytes, coagulogram",
+        "- Continuous cardiac monitor + SpO2; IV access",
+        "- ASA (if not contraindicated); analgesia; consider GTN",
+        "- CXR; risk-stratify (e.g. HEART score)",
+      ].join("\n")
+    );
+  },
+  anaphylaxis: () => {
+    const t = nowTime();
+    const until = timePlusHours(2);
+    appendText(
+      fManagement,
+      [
+        "[Anaphylaxis]",
+        "- Epinephrine 1:1000 0.5 ml IM anterolateral thigh (given " + t + ")",
+        "- Remove trigger; high-flow O2; lay supine with legs raised",
+        "- IV access; IV fluid bolus",
+        "- CPM 10 mg IV stat",
+        "- Dexamethasone 8 mg IV stat",
+        "- Observe for at least 2 hours (until " + until + ")",
+        "- Repeat epinephrine every 5-15 min if no improvement",
+      ].join("\n")
+    );
+    if (!fFluid.value.trim()) fFluid.value = "NSS IV bolus";
+    if (!fOxygen.value) fOxygen.value = "Non-rebreather mask";
+  },
   stroke: () => {
     appendText(
       fExam,
@@ -745,6 +787,12 @@ function truncate(s, n) {
 
 function nowTime() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+// Clock time `h` hours from now (e.g. anaphylaxis observation window).
+function timePlusHours(h) {
+  const d = new Date(Date.now() + h * 3600 * 1000);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 function fullTime(ts) {
