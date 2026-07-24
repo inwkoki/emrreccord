@@ -368,6 +368,22 @@ function clearForm() {
 
 newBtn.addEventListener("click", clearForm);
 
+// Quick "normal" physical-exam template. Fills the field if empty, otherwise
+// appends on a new line so a partly-typed exam is not lost.
+const NORMAL_PE = [
+  "HEENT: no pale conjunctiva, anicteric sclera",
+  "Lung: clear and equal breath sounds both lungs",
+  "Abd: soft, not tender, no guarding",
+  "Neuro: E4V5M6, pupil 3 mm RTLBE",
+  "Ext: no rash, no edema",
+].join("\n");
+
+document.getElementById("tpl-exam").addEventListener("click", () => {
+  const cur = fExam.value.trim();
+  fExam.value = cur ? cur + "\n" + NORMAL_PE : NORMAL_PE;
+  fExam.focus();
+});
+
 sendBtn.addEventListener("click", async () => {
   const bed = fBed.value.trim();
   if (!bed) {
