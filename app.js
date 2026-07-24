@@ -159,19 +159,20 @@ function renderMessage(msg) {
   const mine = msg.uid === uid;
   wrap.className = "msg " + (mine ? "me" : "other");
 
-  const meta = document.createElement("div");
-  meta.className = "meta";
-  const nameSpan = document.createElement("span");
-  nameSpan.textContent = mine ? "You" : msg.name || "Anonymous";
-  const timeSpan = document.createElement("span");
-  timeSpan.textContent = formatTime(msg.ts);
-  meta.append(nameSpan, timeSpan);
+  // IRC-style single line:  [12:04] <name> text
+  const time = document.createElement("span");
+  time.className = "time";
+  time.textContent = "[" + formatTime(msg.ts) + "]";
 
-  const text = document.createElement("div");
+  const name = document.createElement("span");
+  name.className = "name";
+  name.textContent = msg.name || "Anonymous";
+
+  const text = document.createElement("span");
   text.className = "text";
   text.textContent = msg.text; // textContent prevents HTML/script injection
 
-  wrap.append(meta, text);
+  wrap.append(time, name, text);
   messagesEl.appendChild(wrap);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
@@ -194,3 +195,15 @@ function showLoginError(text) {
   loginStatus.textContent = text;
   loginStatus.classList.add("error");
 }
+
+// ---------------------------------------------------------------------------
+// Purely-for-vibes retro visitor counter
+// ---------------------------------------------------------------------------
+(function visitorCounter() {
+  const el = document.getElementById("visitor-count");
+  if (!el) return;
+  let n = parseInt(localStorage.getItem("visitor_count") || "1336", 10);
+  n += 1;
+  localStorage.setItem("visitor_count", String(n));
+  el.textContent = String(n).padStart(6, "0");
+})();

@@ -3,61 +3,92 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Realtime Chat</title>
+  <title>~*~ Koki's Kool Chat Room ~*~</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💾</text></svg>" />
 </head>
 <body>
   <div id="app">
     <!-- Login screen -->
     <section id="login-screen" class="screen">
-      <div class="card">
-        <h1>💬 Realtime Chat</h1>
-        <p class="subtitle">Pick a name and start chatting.</p>
-        <form id="login-form">
-          <input
-            id="username-input"
-            type="text"
-            placeholder="Your display name"
-            maxlength="24"
-            autocomplete="off"
-            required
+      <div class="window">
+        <div class="titlebar">
+          <span>💬 chat.exe</span>
+          <span class="titlebar-btns"><b>_</b><b>▢</b><b>✕</b></span>
+        </div>
+        <div class="window-body center">
+          <marquee behavior="alternate" scrollamount="6" class="rainbow">
+            ★彡 W E L C O M E   T O   T H E   C H A T   R O O M 彡★
+          </marquee>
+          <h1 class="blink glow">~*~ Koki's Kool Chat ~*~</h1>
+          <p class="subtitle">Sign the guestbook & start chattin'!!!</p>
+          <img
+            class="pixel"
+            alt="new"
+            src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='16'><rect width='36' height='16' fill='%23ff0000'/><text x='18' y='12' font-family='monospace' font-size='11' fill='yellow' text-anchor='middle' font-weight='bold'>NEW!</text></svg>"
           />
-          <button type="submit">Join chat</button>
-        </form>
-        <p id="login-status" class="status"></p>
+          <form id="login-form">
+            <label class="field-label">Enter your handle:</label>
+            <input
+              id="username-input"
+              type="text"
+              placeholder="xX_CoolDude_Xx"
+              maxlength="24"
+              autocomplete="off"
+              required
+            />
+            <button type="submit">&gt;&gt; ENTER CHAT &lt;&lt;</button>
+          </form>
+          <p id="login-status" class="status"></p>
+          <hr />
+          <p class="counter">
+            You are visitor #<span id="visitor-count">001337</span> 🔥
+          </p>
+          <img
+            class="construction"
+            alt="under construction"
+            src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='26'><rect width='260' height='26' fill='%23ffcc00'/><rect width='260' height='26' fill='none' stroke='black' stroke-width='2' stroke-dasharray='10,6'/><text x='130' y='18' font-family='monospace' font-size='13' fill='black' text-anchor='middle' font-weight='bold'>🚧 UNDER CONSTRUCTION 🚧</text></svg>"
+          />
+        </div>
       </div>
     </section>
 
     <!-- Chat screen -->
     <section id="chat-screen" class="screen hidden">
-      <header class="chat-header">
-        <div>
-          <span class="dot" id="conn-dot"></span>
-          <strong>Realtime Chat</strong>
+      <div class="window chat-window">
+        <div class="titlebar">
+          <span><span class="dot" id="conn-dot"></span> Koki's Kool Chat Room -- [ Netscape Navigator ]</span>
+          <span class="titlebar-btns"><b>_</b><b>▢</b><b>✕</b></span>
         </div>
-        <div class="header-right">
-          <span id="me-label" class="me-label"></span>
-          <button id="leave-btn" class="ghost-btn" title="Leave">Leave</button>
+
+        <div class="chat-toolbar">
+          <marquee scrollamount="4" class="ticker">
+            📢 Welcome to the chat room! No flaming! Respect the webmaster! 📢 Best viewed in 800x600 📢 Sign my guestbook 📢
+          </marquee>
         </div>
-      </header>
 
-      <main id="messages" class="messages"></main>
+        <div id="messages" class="messages"></div>
 
-      <form id="chat-form" class="chat-form">
-        <input
-          id="message-input"
-          type="text"
-          placeholder="Type a message…"
-          maxlength="500"
-          autocomplete="off"
-        />
-        <button type="submit" id="send-btn">Send</button>
-      </form>
+        <form id="chat-form" class="chat-form">
+          <input
+            id="message-input"
+            type="text"
+            placeholder="Type here and hit SEND..."
+            maxlength="500"
+            autocomplete="off"
+          />
+          <button type="submit" id="send-btn">SEND!</button>
+          <button type="button" id="leave-btn" class="leave">Log Off</button>
+        </form>
+
+        <div class="statusbar">
+          <span id="me-label"></span>
+          <span class="statusbar-right">© 1998 · Made with Notepad</span>
+        </div>
+      </div>
     </section>
   </div>
 
-  <!-- Firebase SDK (modular, loaded as ES module in app.js) -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
