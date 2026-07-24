@@ -385,15 +385,52 @@ button:disabled {
   padding: 16px;
 }
 
-.patient-select {
+/* Tappable patient tabs (sorted most-recently-edited first) */
+.patient-tabs {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 4px;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 6px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
-.patient-select select {
-  flex: 1;
+.ptab {
+  flex: 0 0 auto;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.ptab.new {
+  border-style: dashed;
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.ptab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.ptab .sub {
+  font-weight: 400;
+  opacity: 0.7;
+  margin-left: 6px;
+  font-size: 12px;
+}
+
+.sent-row {
+  min-height: 16px;
+  margin-bottom: 4px;
 }
 
 .sent-note {

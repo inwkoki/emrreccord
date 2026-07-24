@@ -55,7 +55,7 @@ const confirmWrap = $("confirm-wrap");
 const roleHello = $("role-hello");
 
 // Bedside
-const patientPicker = $("patient-picker");
+const patientTabs = $("patient-tabs");
 const fBed = $("f-bed");
 const fComplaint = $("f-complaint");
 const fHistory = $("f-history");
@@ -333,25 +333,45 @@ function subscribe() {
 // BEDSIDE
 // ---------------------------------------------------------------------------
 function renderPatientOptions() {
-  const active = activeSorted();
-  const prev = patientPicker.value;
-  patientPicker.innerHTML = '<option value="">➕ New patient…</option>';
+  const active = activeSorted(); // already sorted by updatedAt, newest first
+  patientTabs.innerHTML = "";
+
+  // "New patient" tab first.
+  const nw = document.createElement("button");
+  nw.type = "button";
+  nw.className = "ptab new" + (currentEncounterId ? "" : " active");
+  nw.dataset.new = "1";
+  nw.textContent = "➕ New";
+  patientTabs.appendChild(nw);
+
+  // One tab per active patient.
   active.forEach(([id, e]) => {
-    const opt = document.createElement("option");
-    opt.value = id;
-    opt.textContent = (e.bed || "(no bed)") + (e.complaint ? " — " + truncate(e.complaint, 24) : "");
-    patientPicker.appendChild(opt);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "ptab" + (id === currentEncounterId ? " active" : "");
+    b.dataset.id = id;
+    const bed = document.createElement("span");
+    bed.textContent = e.bed || "(no bed)";
+    b.appendChild(bed);
+    if (e.complaint) {
+      const sub = document.createElement("span");
+      sub.className = "sub";
+      sub.textContent = truncate(e.complaint, 18);
+      b.appendChild(sub);
+    }
+    patientTabs.appendChild(b);
   });
-  patientPicker.value = currentEncounterId && encounters[currentEncounterId] ? currentEncounterId : prev;
 }
 
-patientPicker.addEventListener("change", () => {
-  const id = patientPicker.value;
-  if (!id) {
+// Tap a tab to load that patient, or "New" to start a fresh entry.
+patientTabs.addEventListener("click", (ev) => {
+  const btn = ev.target.closest(".ptab");
+  if (!btn) return;
+  if (btn.dataset.new) {
     clearForm();
-    return;
+  } else {
+    loadIntoForm(btn.dataset.id);
   }
-  loadIntoForm(id);
 });
 
 // All bedside text fields mapped to their encounter keys, so load/clear/send
@@ -382,13 +402,14 @@ function loadIntoForm(id) {
   currentEncounterId = id;
   for (const [key, el] of Object.entries(FIELD_MAP)) el.value = e[key] || "";
   sentNote.textContent = "loaded";
+  renderPatientOptions(); // refresh active-tab highlight
 }
 
 function clearForm() {
   currentEncounterId = null;
   for (const el of Object.values(FIELD_MAP)) el.value = "";
   sentNote.textContent = "";
-  patientPicker.value = "";
+  renderPatientOptions(); // highlight the "New" tab
   fBed.focus();
 }
 
