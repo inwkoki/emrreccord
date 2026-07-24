@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Realtime Chat</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>" />
+</head>
+<body>
+  <div id="app">
+    <!-- Login screen -->
+    <section id="login-screen" class="screen">
+      <div class="card">
+        <h1>💬 Realtime Chat</h1>
+        <p class="subtitle">Pick a name and start chatting.</p>
+        <form id="login-form">
+          <input
+            id="username-input"
+            type="text"
+            placeholder="Your display name"
+            maxlength="24"
+            autocomplete="off"
+            required
+          />
+          <button type="submit">Join chat</button>
+        </form>
+        <p id="login-status" class="status"></p>
+      </div>
+    </section>
+
+    <!-- Chat screen -->
+    <section id="chat-screen" class="screen hidden">
+      <header class="chat-header">
+        <div>
+          <span class="dot" id="conn-dot"></span>
+          <strong>Realtime Chat</strong>
+        </div>
+        <div class="header-right">
+          <span id="me-label" class="me-label"></span>
+          <button id="leave-btn" class="ghost-btn" title="Leave">Leave</button>
+        </div>
+      </header>
+
+      <main id="messages" class="messages"></main>
+
+      <form id="chat-form" class="chat-form">
+        <input
+          id="message-input"
+          type="text"
+          placeholder="Type a message…"
+          maxlength="500"
+          autocomplete="off"
+        />
+        <button type="submit" id="send-btn">Send</button>
+      </form>
+    </section>
+  </div>
+
+  <!-- Firebase SDK (modular, loaded as ES module in app.js) -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

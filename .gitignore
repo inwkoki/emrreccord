@@ -1,0 +1,17 @@
+# Dependencies (none required — app uses Firebase CDN)
+node_modules/
+
+# Firebase local artifacts
+.firebase/
+firebase-debug.log
+*-debug.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Env files (do not commit secrets)
+.env
+.env.*
