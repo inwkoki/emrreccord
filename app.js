@@ -1,5 +1,5 @@
-// Realtime Chat — Firebase Realtime Database + Anonymous Auth
-// Uses Firebase modular SDK loaded from the official CDN (ES modules).
+// ED QuickCapture — Firebase Realtime Database + Anonymous Auth
+// Bedside phone entry syncs live to the station computer for EMR recording.
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -11,9 +11,10 @@ import {
   getDatabase,
   ref,
   push,
+  update,
   query,
   limitToLast,
-  onChildAdded,
+  orderByChild,
   onValue,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
@@ -21,189 +22,413 @@ import {
 import { firebaseConfig } from "./firebase-config.js";
 
 // ---------------------------------------------------------------------------
-// DOM references
+// Elements
 // ---------------------------------------------------------------------------
-const loginScreen = document.getElementById("login-screen");
-const chatScreen = document.getElementById("chat-screen");
-const loginForm = document.getElementById("login-form");
-const usernameInput = document.getElementById("username-input");
-const loginStatus = document.getElementById("login-status");
-const messagesEl = document.getElementById("messages");
-const chatForm = document.getElementById("chat-form");
-const messageInput = document.getElementById("message-input");
-const meLabel = document.getElementById("me-label");
-const connDot = document.getElementById("conn-dot");
-const leaveBtn = document.getElementById("leave-btn");
+const $ = (id) => document.getElementById(id);
+
+const setupScreen = $("setup-screen");
+const bedsideScreen = $("bedside-screen");
+const stationScreen = $("station-screen");
+const setupForm = $("setup-form");
+const clinicianInput = $("clinician-input");
+const setupStatus = $("setup-status");
+
+// Bedside
+const patientPicker = $("patient-picker");
+const fBed = $("f-bed");
+const fComplaint = $("f-complaint");
+const fHistory = $("f-history");
+const fExam = $("f-exam");
+const fBedside = $("f-bedside");
+const sendBtn = $("send-btn");
+const newBtn = $("new-btn");
+const bedsideStatus = $("bedside-status");
+const sentNote = $("sent-note");
+const meBedside = $("me-bedside");
+const dotBedside = $("dot-bedside");
+
+// Station
+const patientList = $("patient-list");
+const listEmpty = $("list-empty");
+const activeCount = $("active-count");
+const detailEmpty = $("detail-empty");
+const detailContent = $("detail-content");
+const dBed = $("d-bed");
+const dBy = $("d-by");
+const dUpdated = $("d-updated");
+const dNote = $("d-note");
+const copyBtn = $("copy-btn");
+const recordBtn = $("record-btn");
+const detailStatus = $("detail-status");
+const meStation = $("me-station");
+const dotStation = $("dot-station");
+const meStationEl = $("me-station");
 
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
-let username = localStorage.getItem("chat_username") || "";
+let clinician = localStorage.getItem("edqc_clinician") || "";
+let role = localStorage.getItem("edqc_role") || "";
 let uid = null;
-let messagesRef = null;
+let currentEncounterId = null; // bedside: which patient is being edited
+let selectedId = null; // station: which patient is shown
+let encounters = {}; // id -> data
+const seenUpdatedAt = {}; // id -> last updatedAt (for flash detection)
 
 // ---------------------------------------------------------------------------
-// Guard against unconfigured Firebase
+// Firebase init + config guard
 // ---------------------------------------------------------------------------
+let app, auth, db, configured = true;
 if (
   firebaseConfig.apiKey.startsWith("REPLACE_ME") ||
   firebaseConfig.databaseURL.startsWith("REPLACE_ME")
 ) {
-  showLoginError(
-    "Firebase is not configured yet. Fill in firebase-config.js with your project's web config."
-  );
-  usernameInput.disabled = true;
-  loginForm.querySelector("button").disabled = true;
+  configured = false;
+  setStatus(setupStatus, "⚠️ Firebase not configured — fill in firebase-config.js.", "error");
 }
 
-// ---------------------------------------------------------------------------
-// Initialize Firebase
-// ---------------------------------------------------------------------------
-let app, auth, db;
 try {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getDatabase(app);
 } catch (err) {
   console.error(err);
-  showLoginError("Failed to initialize Firebase: " + err.message);
+  configured = false;
+  setStatus(setupStatus, "Failed to init Firebase: " + err.message, "error");
 }
 
-// Prefill saved username
-if (username) usernameInput.value = username;
-
 // ---------------------------------------------------------------------------
-// Auth flow
+// Setup screen
 // ---------------------------------------------------------------------------
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const name = usernameInput.value.trim();
-  if (!name) return;
-  username = name;
-  localStorage.setItem("chat_username", username);
+clinicianInput.value = clinician;
 
-  setLoginStatus("Connecting…");
-  loginForm.querySelector("button").disabled = true;
+// Default role suggestion by screen size (user can still choose either).
+const suggestedRole = window.matchMedia("(max-width: 760px)").matches ? "bedside" : "station";
 
-  try {
-    await signInAnonymously(auth);
-    // onAuthStateChanged handles the rest.
-  } catch (err) {
-    console.error(err);
-    showLoginError("Sign-in failed: " + (err.code || err.message));
-    loginForm.querySelector("button").disabled = false;
-  }
+document.querySelectorAll(".role-btn").forEach((btn) => {
+  if (btn.dataset.role === suggestedRole) btn.style.borderColor = "var(--primary)";
+  btn.addEventListener("click", () => {
+    const name = clinicianInput.value.trim();
+    if (!name) {
+      setStatus(setupStatus, "Please enter your name/initials first.", "error");
+      clinicianInput.focus();
+      return;
+    }
+    clinician = name;
+    role = btn.dataset.role;
+    localStorage.setItem("edqc_clinician", clinician);
+    localStorage.setItem("edqc_role", role);
+    start();
+  });
 });
+
+setupForm.addEventListener("submit", (e) => e.preventDefault());
+
+// Device role switch buttons
+document.querySelectorAll("[data-switch]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    role = btn.dataset.switch;
+    localStorage.setItem("edqc_role", role);
+    showRole();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Auth + start
+// ---------------------------------------------------------------------------
+function start() {
+  if (!configured) return;
+  setStatus(setupStatus, "Connecting…");
+  signInAnonymously(auth).catch((err) => {
+    console.error(err);
+    setStatus(setupStatus, "Sign-in failed: " + (err.code || err.message), "error");
+  });
+}
+
+// Auto-start if we already know the role from a previous session.
+if (clinician && role && configured) start();
 
 onAuthStateChanged(auth, (user) => {
+  const online = !!user;
+  dotBedside.classList.toggle("online", online);
+  dotStation.classList.toggle("online", online);
   if (user) {
     uid = user.uid;
-    if (username) enterChat();
-  } else {
-    uid = null;
+    subscribe();
+    showRole();
   }
 });
 
-// ---------------------------------------------------------------------------
-// Chat
-// ---------------------------------------------------------------------------
-function enterChat() {
-  loginScreen.classList.add("hidden");
-  chatScreen.classList.remove("hidden");
-  meLabel.textContent = "You: " + username;
-  messageInput.focus();
+function showRole() {
+  meBedside.textContent = clinician;
+  meStationEl.textContent = clinician;
+  setupScreen.classList.add("hidden");
+  bedsideScreen.classList.toggle("hidden", role !== "bedside");
+  stationScreen.classList.toggle("hidden", role !== "station");
+  if (role === "bedside") fBed.focus();
+}
 
-  // Listen for connection state
-  const connectedRef = ref(db, ".info/connected");
-  onValue(connectedRef, (snap) => {
-    connDot.classList.toggle("online", snap.val() === true);
-  });
-
-  // Subscribe to the last 100 messages, then live-append new ones.
-  messagesRef = query(ref(db, "messages"), limitToLast(100));
-  onChildAdded(messagesRef, (snap) => {
-    renderMessage(snap.val());
+// ---------------------------------------------------------------------------
+// Realtime subscription (shared by both roles)
+// ---------------------------------------------------------------------------
+let subscribed = false;
+function subscribe() {
+  if (subscribed || !db) return;
+  subscribed = true;
+  const q = query(ref(db, "encounters"), orderByChild("updatedAt"), limitToLast(100));
+  onValue(q, (snap) => {
+    encounters = snap.val() || {};
+    if (role === "station") renderStation();
+    if (role === "bedside") renderPatientOptions();
   });
 }
 
-chatForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const text = messageInput.value.trim();
-  if (!text || !uid) return;
+// ---------------------------------------------------------------------------
+// BEDSIDE
+// ---------------------------------------------------------------------------
+function renderPatientOptions() {
+  const active = activeSorted();
+  const prev = patientPicker.value;
+  patientPicker.innerHTML = '<option value="">➕ New patient…</option>';
+  active.forEach(([id, e]) => {
+    const opt = document.createElement("option");
+    opt.value = id;
+    opt.textContent = (e.bed || "(no bed)") + (e.complaint ? " — " + truncate(e.complaint, 24) : "");
+    patientPicker.appendChild(opt);
+  });
+  patientPicker.value = currentEncounterId && encounters[currentEncounterId] ? currentEncounterId : prev;
+}
 
-  messageInput.value = "";
+patientPicker.addEventListener("change", () => {
+  const id = patientPicker.value;
+  if (!id) {
+    clearForm();
+    return;
+  }
+  loadIntoForm(id);
+});
+
+function loadIntoForm(id) {
+  const e = encounters[id];
+  if (!e) return;
+  currentEncounterId = id;
+  fBed.value = e.bed || "";
+  fComplaint.value = e.complaint || "";
+  fHistory.value = e.history || "";
+  fExam.value = e.exam || "";
+  fBedside.value = e.bedside || "";
+  sentNote.textContent = "loaded";
+}
+
+function clearForm() {
+  currentEncounterId = null;
+  fBed.value = "";
+  fComplaint.value = "";
+  fHistory.value = "";
+  fExam.value = "";
+  fBedside.value = "";
+  sentNote.textContent = "";
+  patientPicker.value = "";
+  fBed.focus();
+}
+
+newBtn.addEventListener("click", clearForm);
+
+sendBtn.addEventListener("click", async () => {
+  const bed = fBed.value.trim();
+  if (!bed) {
+    setStatus(bedsideStatus, "Bed / identifier is required.", "error");
+    fBed.focus();
+    return;
+  }
+  if (!uid) return;
+
+  const payload = {
+    bed,
+    complaint: fComplaint.value.trim(),
+    history: fHistory.value.trim(),
+    exam: fExam.value.trim(),
+    bedside: fBedside.value.trim(),
+    by: clinician,
+    status: "active",
+    updatedAt: serverTimestamp(),
+  };
+
+  sendBtn.disabled = true;
+  setStatus(bedsideStatus, "Sending…");
   try {
-    await push(ref(db, "messages"), {
-      uid,
-      name: username,
-      text,
-      ts: serverTimestamp(),
-    });
+    if (currentEncounterId && encounters[currentEncounterId]) {
+      await update(ref(db, "encounters/" + currentEncounterId), payload);
+    } else {
+      payload.createdAt = serverTimestamp();
+      const newRef = await push(ref(db, "encounters"), payload);
+      currentEncounterId = newRef.key;
+    }
+    setStatus(bedsideStatus, "✓ Sent to station", "ok");
+    sentNote.textContent = "sent " + nowTime();
   } catch (err) {
     console.error(err);
-    messageInput.value = text; // restore on failure
-    alert("Could not send message: " + (err.code || err.message));
+    setStatus(bedsideStatus, "Failed: " + (err.code || err.message), "error");
+  } finally {
+    sendBtn.disabled = false;
   }
 });
 
-leaveBtn.addEventListener("click", () => {
-  location.reload();
+// ---------------------------------------------------------------------------
+// STATION
+// ---------------------------------------------------------------------------
+function renderStation() {
+  const active = activeSorted();
+  activeCount.textContent = active.length;
+  listEmpty.classList.toggle("hidden", active.length > 0);
+
+  // Remove old cards (keep the empty message node)
+  [...patientList.querySelectorAll(".p-card")].forEach((n) => n.remove());
+
+  active.forEach(([id, e]) => {
+    const card = document.createElement("div");
+    card.className = "p-card" + (id === selectedId ? " active" : "");
+    card.dataset.id = id;
+
+    // Flash if this record changed since we last saw it.
+    if (seenUpdatedAt[id] !== undefined && e.updatedAt !== seenUpdatedAt[id]) {
+      card.classList.add("flash");
+      setTimeout(() => card.classList.remove("flash"), 1500);
+    }
+    seenUpdatedAt[id] = e.updatedAt;
+
+    card.innerHTML = `
+      <div class="bed"></div>
+      <div class="cc"></div>
+      <div class="foot"><span class="by"></span><span class="t"></span></div>`;
+    card.querySelector(".bed").textContent = e.bed || "(no bed)";
+    card.querySelector(".cc").textContent = e.complaint || "—";
+    card.querySelector(".by").textContent = e.by || "";
+    card.querySelector(".t").textContent = relTime(e.updatedAt);
+    card.addEventListener("click", () => selectPatient(id));
+    patientList.appendChild(card);
+  });
+
+  // Refresh open detail if it changed
+  if (selectedId && encounters[selectedId] && encounters[selectedId].status === "active") {
+    renderDetail(selectedId);
+  } else if (selectedId && (!encounters[selectedId] || encounters[selectedId].status !== "active")) {
+    selectedId = null;
+    detailContent.classList.add("hidden");
+    detailEmpty.classList.remove("hidden");
+  }
+}
+
+function selectPatient(id) {
+  selectedId = id;
+  document.querySelectorAll(".p-card").forEach((c) =>
+    c.classList.toggle("active", c.dataset.id === id)
+  );
+  renderDetail(id);
+}
+
+function renderDetail(id) {
+  const e = encounters[id];
+  if (!e) return;
+  detailEmpty.classList.add("hidden");
+  detailContent.classList.remove("hidden");
+  dBed.textContent = e.bed || "(no bed)";
+  dBy.textContent = "by " + (e.by || "unknown");
+  dUpdated.textContent = relTime(e.updatedAt);
+  dNote.textContent = formatNote(e);
+  setStatus(detailStatus, "");
+}
+
+copyBtn.addEventListener("click", async () => {
+  if (!selectedId) return;
+  const text = formatNote(encounters[selectedId]);
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus(detailStatus, "✓ Copied — paste into the EMR.", "ok");
+  } catch {
+    // Fallback for older browsers / insecure context
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+    setStatus(detailStatus, "✓ Copied — paste into the EMR.", "ok");
+  }
+});
+
+recordBtn.addEventListener("click", async () => {
+  if (!selectedId) return;
+  try {
+    await update(ref(db, "encounters/" + selectedId), {
+      status: "recorded",
+      updatedAt: serverTimestamp(),
+    });
+    setStatus(detailStatus, "Marked as recorded — removed from active list.", "ok");
+  } catch (err) {
+    setStatus(detailStatus, "Failed: " + (err.code || err.message), "error");
+  }
 });
 
 // ---------------------------------------------------------------------------
-// Rendering
+// Note formatting for EMR paste
 // ---------------------------------------------------------------------------
-function renderMessage(msg) {
-  if (!msg) return;
-  const wrap = document.createElement("div");
-  const mine = msg.uid === uid;
-  wrap.className = "msg " + (mine ? "me" : "other");
-
-  // IRC-style single line:  [12:04] <name> text
-  const time = document.createElement("span");
-  time.className = "time";
-  time.textContent = "[" + formatTime(msg.ts) + "]";
-
-  const name = document.createElement("span");
-  name.className = "name";
-  name.textContent = msg.name || "Anonymous";
-
-  const text = document.createElement("span");
-  text.className = "text";
-  text.textContent = msg.text; // textContent prevents HTML/script injection
-
-  wrap.append(time, name, text);
-  messagesEl.appendChild(wrap);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-}
-
-function formatTime(ts) {
-  if (!ts) return "";
-  const d = new Date(ts);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+function formatNote(e) {
+  const parts = [];
+  parts.push("PATIENT: " + (e.bed || "(no bed)"));
+  if (e.complaint) parts.push("\nCHIEF COMPLAINT:\n" + e.complaint);
+  if (e.history) parts.push("\nHISTORY:\n" + e.history);
+  if (e.exam) parts.push("\nPHYSICAL EXAM:\n" + e.exam);
+  if (e.bedside) parts.push("\nBEDSIDE TESTS:\n" + e.bedside);
+  parts.push("\n— Entered by " + (e.by || "unknown") + " · " + fullTime(e.updatedAt));
+  return parts.join("\n");
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function setLoginStatus(text) {
-  loginStatus.textContent = text;
-  loginStatus.classList.remove("error");
+function activeSorted() {
+  return Object.entries(encounters)
+    .filter(([, e]) => e && e.status === "active")
+    .sort((a, b) => (b[1].updatedAt || 0) - (a[1].updatedAt || 0));
 }
 
-function showLoginError(text) {
-  loginStatus.textContent = text;
-  loginStatus.classList.add("error");
+function truncate(s, n) {
+  return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
 
-// ---------------------------------------------------------------------------
-// Purely-for-vibes retro visitor counter
-// ---------------------------------------------------------------------------
-(function visitorCounter() {
-  const el = document.getElementById("visitor-count");
-  if (!el) return;
-  let n = parseInt(localStorage.getItem("visitor_count") || "1336", 10);
-  n += 1;
-  localStorage.setItem("visitor_count", String(n));
-  el.textContent = String(n).padStart(6, "0");
-})();
+function nowTime() {
+  return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function fullTime(ts) {
+  if (!ts) return "";
+  return new Date(ts).toLocaleString();
+}
+
+function relTime(ts) {
+  if (!ts) return "just now";
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 10) return "just now";
+  if (s < 60) return s + "s ago";
+  if (s < 3600) return Math.floor(s / 60) + "m ago";
+  if (s < 86400) return Math.floor(s / 3600) + "h ago";
+  return new Date(ts).toLocaleDateString();
+}
+
+function setStatus(el, text, kind) {
+  el.textContent = text;
+  el.classList.remove("error", "ok");
+  if (kind) el.classList.add(kind);
+}
+
+// Keep relative timestamps fresh
+setInterval(() => {
+  if (role === "station") {
+    document.querySelectorAll(".p-card").forEach((c) => {
+      const e = encounters[c.dataset.id];
+      if (e) c.querySelector(".t").textContent = relTime(e.updatedAt);
+    });
+    if (selectedId && encounters[selectedId]) dUpdated.textContent = relTime(encounters[selectedId].updatedAt);
+  }
+}, 15000);

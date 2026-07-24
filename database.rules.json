@@ -1,19 +1,22 @@
 {
   "rules": {
-    "messages": {
-      // Any signed-in user (anonymous auth counts) can read the chat history.
+    "encounters": {
+      // Any signed-in staff device (anonymous auth) can read/write the board.
       ".read": "auth != null",
-      // New messages can be appended by signed-in users, but not edited/deleted.
       ".write": "auth != null",
-      ".indexOn": ["ts"],
-      "$msgId": {
-        // Validate the shape of each message.
-        ".validate": "newData.hasChildren(['uid', 'name', 'text', 'ts']) && newData.child('uid').val() === auth.uid && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 500 && newData.child('name').isString() && newData.child('name').val().length <= 24",
-        "uid":  { ".validate": "newData.isString()" },
-        "name": { ".validate": "newData.isString()" },
-        "text": { ".validate": "newData.isString()" },
-        "ts":   { ".validate": "newData.val() <= now" },
-        "$other": { ".validate": false }
+      ".indexOn": ["updatedAt"],
+      "$id": {
+        ".validate": "newData.hasChildren(['bed', 'updatedAt', 'by', 'status'])",
+        "bed":       { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40" },
+        "complaint": { ".validate": "newData.isString() && newData.val().length <= 5000" },
+        "history":   { ".validate": "newData.isString() && newData.val().length <= 5000" },
+        "exam":      { ".validate": "newData.isString() && newData.val().length <= 5000" },
+        "bedside":   { ".validate": "newData.isString() && newData.val().length <= 5000" },
+        "by":        { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "status":    { ".validate": "newData.isString() && (newData.val() === 'active' || newData.val() === 'recorded')" },
+        "createdAt": { ".validate": "newData.val() <= now" },
+        "updatedAt": { ".validate": "newData.val() <= now" },
+        "$other":    { ".validate": false }
       }
     }
   }

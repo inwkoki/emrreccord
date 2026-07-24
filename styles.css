@@ -1,20 +1,20 @@
 /* ===================================================================
-   ~*~ 90s / GeoCities / Windows 95 chat aesthetic ~*~
+   ED QuickCapture — clean clinical UI
    =================================================================== */
 
-@import url("https://fonts.googleapis.com/css2?family=VT323&display=swap");
-
 :root {
-  --gray: #c0c0c0;
-  --gray-dark: #808080;
-  --gray-darker: #404040;
-  --navy: #000080;
-  --teal: #008080;
-  --white: #ffffff;
-  --black: #000000;
-  --hot: #ff00ff;
-  --lime: #00ff00;
-  --cyan: #00ffff;
+  --bg: #f1f5f9;
+  --panel: #ffffff;
+  --line: #e2e8f0;
+  --text: #0f172a;
+  --muted: #64748b;
+  --primary: #0d9488;      /* teal — clinical */
+  --primary-dark: #0f766e;
+  --accent: #2563eb;
+  --ok: #16a34a;
+  --warn: #f59e0b;
+  --danger: #dc2626;
+  --flash: #fef9c3;
 }
 
 * {
@@ -28,327 +28,402 @@ body {
 }
 
 body {
-  font-family: "Comic Sans MS", "Comic Sans", "Times New Roman", cursive, serif;
-  /* Classic tiled teal background */
-  background-color: var(--teal);
-  background-image:
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.04) 0 8px, transparent 8px 16px),
-    radial-gradient(circle, #00a0a0 1px, transparent 1px);
-  background-size: auto, 12px 12px;
-  color: var(--black);
-  cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'><text y='18' font-size='18'>👆</text></svg>") 4 4, auto;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-text-size-adjust: 100%;
 }
 
 #app {
   min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
 }
 
 .screen {
-  width: 100%;
-  max-width: 640px;
+  min-height: 100dvh;
   display: flex;
+  flex-direction: column;
+}
+
+.screen.center {
+  align-items: center;
   justify-content: center;
+  padding: 20px;
 }
 
 .hidden {
   display: none !important;
 }
 
-/* ---------- Win95 window chrome ---------- */
-.window {
+/* ---------- Setup card ---------- */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 28px;
   width: 100%;
-  background: var(--gray);
-  border: 2px solid;
-  border-color: #ffffff var(--gray-darker) var(--gray-darker) #ffffff;
-  box-shadow: 2px 2px 0 var(--black);
-  padding: 3px;
+  max-width: 420px;
+  box-shadow: 0 12px 40px rgba(2, 6, 23, 0.08);
 }
 
-.chat-window {
-  display: flex;
-  flex-direction: column;
-  height: 88dvh;
-  max-height: 700px;
-}
-
-.titlebar {
-  background: linear-gradient(90deg, var(--navy), #1084d0);
-  color: var(--white);
-  font-family: "Times New Roman", serif;
-  font-weight: bold;
-  padding: 4px 6px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 14px;
-}
-
-.titlebar-btns b {
-  display: inline-block;
-  background: var(--gray);
-  color: var(--black);
-  border: 2px solid;
-  border-color: #ffffff var(--gray-darker) var(--gray-darker) #ffffff;
-  width: 18px;
-  height: 18px;
-  line-height: 14px;
-  text-align: center;
-  margin-left: 2px;
-  font-size: 11px;
-}
-
-.window-body {
-  padding: 16px;
-}
-
-.window-body.center {
-  text-align: center;
-}
-
-/* ---------- Retro text FX ---------- */
-.rainbow {
-  font-family: "Times New Roman", serif;
-  font-weight: bold;
-  font-size: 15px;
-  background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  padding: 4px 0;
-}
-
-.ticker {
-  font-family: "VT323", monospace;
-  font-size: 16px;
-  color: var(--lime);
-}
-
-h1.glow {
-  font-family: "Times New Roman", serif;
-  color: var(--hot);
-  text-shadow: 2px 2px 0 var(--cyan), -1px -1px 0 var(--navy);
-  font-size: 28px;
-  margin: 10px 0 4px;
-}
-
-.blink {
-  animation: blink 1s steps(1) infinite;
-}
-
-@keyframes blink {
-  50% {
-    opacity: 0;
-  }
+.card h1 {
+  margin: 0 0 6px;
+  font-size: 24px;
 }
 
 .subtitle {
-  font-style: italic;
-  margin: 0 0 12px;
-  color: var(--navy);
+  color: var(--muted);
+  margin: 0 0 20px;
+  line-height: 1.5;
 }
 
-.field-label {
+.lbl {
   display: block;
-  font-weight: bold;
-  margin: 8px 0 4px;
-  color: var(--navy);
+  font-weight: 600;
+  font-size: 14px;
+  margin: 14px 0 6px;
+  color: #334155;
 }
 
-.pixel {
-  image-rendering: pixelated;
-  margin: 4px;
+.req {
+  color: var(--danger);
 }
 
-.counter {
-  font-family: "VT323", monospace;
-  font-size: 18px;
-  background: var(--black);
-  color: var(--lime);
-  display: inline-block;
-  padding: 3px 10px;
-  border: 2px inset var(--gray);
-  margin: 8px 0;
-}
-
-.construction {
-  display: block;
-  margin: 10px auto 0;
-}
-
-hr {
-  border: none;
-  border-top: 2px groove var(--white);
-  margin: 12px 0;
-}
-
-/* ---------- Inputs & buttons (beveled) ---------- */
-input {
-  font-family: "Times New Roman", serif;
-  font-size: 15px;
-  padding: 6px 8px;
-  background: var(--white);
-  border: 2px solid;
-  border-color: var(--gray-darker) #ffffff #ffffff var(--gray-darker);
-  outline: none;
+input,
+textarea,
+select {
   width: 100%;
+  font-family: inherit;
+  font-size: 16px; /* 16px avoids iOS zoom on focus */
+  padding: 11px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-#login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 320px;
-  margin: 0 auto;
+textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
 }
 
 button {
-  font-family: "Times New Roman", serif;
-  font-weight: bold;
-  font-size: 14px;
-  padding: 6px 14px;
-  background: var(--gray);
-  color: var(--black);
-  border: 2px solid;
-  border-color: #ffffff var(--gray-darker) var(--gray-darker) #ffffff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 16px;
   cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
 }
 
-button:active {
-  border-color: var(--gray-darker) #ffffff #ffffff var(--gray-darker);
+button.primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+button.primary:hover {
+  background: var(--primary-dark);
+}
+
+button.ok-btn {
+  background: var(--ok);
+  color: #fff;
+}
+
+button.ghost-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid #cbd5e1;
+}
+
+button.ghost-btn:hover {
+  background: #f8fafc;
+  color: var(--text);
 }
 
 button:disabled {
-  color: var(--gray-dark);
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ---------- Role picker ---------- */
+.role-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.role-btn {
+  background: #f8fafc;
+  border: 2px solid var(--line);
+  color: var(--text);
+  padding: 16px 8px;
+  font-size: 22px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.role-btn small {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.role-btn:hover {
+  border-color: var(--primary);
+}
+
+.disclaimer {
+  margin: 22px 0 0;
+  font-size: 12px;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  padding: 10px 12px;
+  line-height: 1.5;
 }
 
 .status {
   font-size: 13px;
-  color: var(--navy);
+  color: var(--muted);
   min-height: 18px;
-  margin: 10px 0 0;
-  font-weight: bold;
+  margin: 12px 0 0;
 }
 
 .status.error {
-  color: red;
+  color: var(--danger);
 }
 
-/* ---------- Connection dot ---------- */
+.status.ok {
+  color: var(--ok);
+}
+
+/* ---------- Top bar ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar .ghost-btn {
+  padding: 7px 11px;
+  font-size: 13px;
+}
+
+.muted {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 13px;
+}
+
 .dot {
   display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: red;
-  border: 1px solid var(--black);
+  background: var(--danger);
+  margin-right: 6px;
   vertical-align: middle;
 }
 
 .dot.online {
-  background: var(--lime);
-  box-shadow: 0 0 5px var(--lime);
+  background: var(--ok);
+  box-shadow: 0 0 6px var(--ok);
 }
 
-/* ---------- Chat area ---------- */
-.chat-toolbar {
-  background: var(--black);
-  border: 2px inset var(--gray);
-  margin: 3px;
-  padding: 3px 0;
-  overflow: hidden;
-}
-
-.messages {
+/* ---------- Bedside form ---------- */
+.bedside-body {
   flex: 1;
-  overflow-y: auto;
-  background: var(--white);
-  border: 2px inset var(--gray);
-  margin: 3px;
-  padding: 8px;
-  font-family: "Times New Roman", serif;
-  font-size: 15px;
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px;
 }
 
-/* IRC-style one-line messages */
-.msg {
-  padding: 2px 0;
-  line-height: 1.45;
-  word-wrap: break-word;
-  border-bottom: 1px dotted #d0d0d0;
-}
-
-.msg .time {
-  color: var(--gray-dark);
-  font-family: "VT323", monospace;
-  font-size: 14px;
-  margin-right: 4px;
-}
-
-.msg .name {
-  font-weight: bold;
-  color: var(--navy);
-}
-
-.msg.me .name {
-  color: var(--hot);
-}
-
-.msg .name::before {
-  content: "<";
-}
-
-.msg .name::after {
-  content: "> ";
-}
-
-.msg .text {
-  color: var(--black);
-  white-space: pre-wrap;
-}
-
-/* ---------- Compose form ---------- */
-.chat-form {
+.patient-select {
   display: flex;
-  gap: 6px;
-  padding: 3px 6px 6px;
-  align-items: stretch;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
 }
 
-.chat-form input {
+.patient-select select {
   flex: 1;
 }
 
-.chat-form button {
+.sent-note {
+  font-size: 12px;
+  color: var(--ok);
   white-space: nowrap;
 }
 
-.leave {
-  background: #d0b0b0;
+.bedside-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
 }
 
-/* ---------- Status bar ---------- */
-.statusbar {
+.bedside-actions .primary {
+  flex: 1;
+}
+
+/* ---------- Station ---------- */
+.station-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 0;
+}
+
+.patient-list {
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  background: var(--panel);
+  padding: 10px;
+}
+
+.empty {
+  color: var(--muted);
+  text-align: center;
+  margin-top: 40px;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.p-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  background: #fff;
+  transition: border-color 0.15s, background 0.4s;
+}
+
+.p-card:hover {
+  border-color: var(--primary);
+}
+
+.p-card.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.18);
+}
+
+.p-card.flash {
+  background: var(--flash);
+  border-color: var(--warn);
+}
+
+.p-card .bed {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.p-card .cc {
+  color: var(--text);
+  font-size: 13px;
+  margin: 4px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.p-card .foot {
   display: flex;
   justify-content: space-between;
-  font-family: "Times New Roman", serif;
-  font-size: 12px;
-  padding: 4px 8px;
-  margin: 0 3px 3px;
-  border: 2px inset var(--gray);
-  background: var(--gray);
-  color: var(--gray-darker);
+  font-size: 11px;
+  color: var(--muted);
 }
 
-@media (max-width: 480px) {
-  h1.glow {
-    font-size: 22px;
+/* ---------- Detail ---------- */
+.detail {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.detail-empty {
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+}
+
+.detail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.detail-head h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.detail-meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.note {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 18px;
+  border-radius: 12px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0 0 16px;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 760px) {
+  .station-body {
+    grid-template-columns: 1fr;
   }
-  .chat-form button {
-    padding: 6px 8px;
+  .patient-list {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    max-height: 40vh;
   }
 }
