@@ -156,6 +156,57 @@ body {
   align-self: center;
 }
 
+/* Physical-exam builder (tap-to-pick, no typing) */
+.exam-builder {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.eb-row {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.eb-row > span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.eb-row select {
+  padding: 9px 10px;
+  font-size: 14px;
+}
+
+.exam-preview {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background: #0f172a;
+  color: #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 6px 0 10px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.chip.eb-insert {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
 /* Per-user custom chips */
 .custom-chips {
   display: contents;

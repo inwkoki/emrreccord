@@ -444,6 +444,68 @@ document.getElementById("tpl-exam").addEventListener("click", () => {
   fExam.focus();
 });
 
+// --- Physical-exam builder: one dropdown per system, tap to pick a phrase ---
+// First option of each system is the "normal" default. "(skip)" omits it.
+const EXAM_SYSTEMS = [
+  ["General", ["Alert, not in distress", "Ill-looking", "Drowsy", "In respiratory distress", "Dehydrated"]],
+  ["HEENT", ["No pale conjunctiva, anicteric sclera", "Pale conjunctiva", "Icteric sclera", "Dry mucous membranes", "Injected pharynx"]],
+  ["Heart", ["Normal S1S2, no murmur", "Tachycardia", "Irregularly irregular", "Murmur present", "Distant heart sounds"]],
+  ["Lung", ["Clear and equal breath sounds both lungs", "Fine crepitations", "Coarse crepitations", "Expiratory wheezing", "Decreased breath sounds, right", "Decreased breath sounds, left"]],
+  ["Abdomen", ["Soft, not tender, no guarding", "Tenderness", "Guarding / rigidity", "Distended", "Rebound tenderness"]],
+  ["Neuro", ["E4V5M6, pupils 3 mm RTLBE", "Drowsy (GCS decreased)", "Focal weakness", "Pupils unequal", "Neck stiffness"]],
+  ["Ext / Skin", ["No edema, no rash", "Pitting edema", "Rash", "Cold peripheries", "Cyanosis"]],
+];
+
+const examBuilder = document.getElementById("exam-builder");
+const examBuilderRows = document.getElementById("exam-builder-rows");
+const examPreview = document.getElementById("exam-preview");
+
+// Build the rows once.
+EXAM_SYSTEMS.forEach(([sys, opts]) => {
+  const row = document.createElement("div");
+  row.className = "eb-row";
+  const label = document.createElement("span");
+  label.textContent = sys;
+  const sel = document.createElement("select");
+  sel.dataset.sys = sys;
+  opts.forEach((o) => {
+    const opt = document.createElement("option");
+    opt.value = o;
+    opt.textContent = o;
+    sel.appendChild(opt);
+  });
+  const skip = document.createElement("option");
+  skip.value = "";
+  skip.textContent = "(skip)";
+  sel.appendChild(skip);
+  sel.addEventListener("change", updateExamPreview);
+  row.append(label, sel);
+  examBuilderRows.appendChild(row);
+});
+
+function composeExam() {
+  const lines = [];
+  examBuilderRows.querySelectorAll("select").forEach((sel) => {
+    if (sel.value) lines.push(sel.dataset.sys + ": " + sel.value);
+  });
+  return lines.join("\n");
+}
+
+function updateExamPreview() {
+  examPreview.textContent = composeExam();
+}
+updateExamPreview();
+
+document.getElementById("exam-builder-toggle").addEventListener("click", () => {
+  examBuilder.classList.toggle("hidden");
+});
+
+document.getElementById("exam-insert").addEventListener("click", () => {
+  appendText(fExam, composeExam());
+  examBuilder.classList.add("hidden");
+  fExam.focus();
+});
+
 // Management quick-pick chips.
 document.querySelectorAll("[data-mgmt]").forEach((btn) => {
   btn.addEventListener("click", () => addMgmtLine(btn.dataset.mgmt));

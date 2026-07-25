@@ -139,7 +139,13 @@
 
         <label class="lbl">Physical exam
           <button type="button" id="tpl-exam" class="chip">＋ Normal</button>
+          <button type="button" id="exam-builder-toggle" class="chip">🩺 Builder</button>
         </label>
+        <div class="exam-builder hidden" id="exam-builder">
+          <div id="exam-builder-rows"></div>
+          <pre id="exam-preview" class="exam-preview"></pre>
+          <button type="button" id="exam-insert" class="chip eb-insert">⬇ Fill exam from picks</button>
+        </div>
         <textarea id="f-exam" rows="7" placeholder="Vitals, general, CVS, resp, abdo, neuro…"></textarea>
 
         <label class="lbl">Bedside test</label>
