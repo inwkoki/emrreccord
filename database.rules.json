@@ -7,6 +7,11 @@
         "username":    { ".validate": "newData.isString() && newData.val().length <= 20" },
         "displayName": { ".validate": "newData.isString() && newData.val().length <= 40" },
         "createdAt":   { ".validate": "newData.val() <= now" },
+        "chips": {
+          "$group": {
+            "$i": { ".validate": "newData.isString() && newData.val().length <= 60" }
+          }
+        },
         "$other":      { ".validate": false }
       }
     },

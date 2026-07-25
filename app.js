@@ -271,6 +271,7 @@ onAuthStateChanged(auth, (user) => {
     uid = user.uid;
     clinician = user.displayName || (user.email || "").split("@")[0] || "Clinician";
     subscribe();
+    subscribeCustomChips();
     if (role === "bedside" || role === "station") {
       showRole();
     } else {
@@ -348,7 +349,8 @@ function renderPatientOptions() {
   active.forEach(([id, e]) => {
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "ptab" + (id === currentEncounterId ? " active" : "");
+    b.className =
+      "ptab" + (id === currentEncounterId ? " active" : "") + (isOwn(e) ? " mine" : "");
     b.dataset.id = id;
     const bed = document.createElement("span");
     bed.textContent = e.bed || "(no bed)";
@@ -468,6 +470,97 @@ function addUnderlying(token) {
 }
 document.querySelectorAll("[data-ud]").forEach((btn) => {
   btn.addEventListener("click", () => addUnderlying(btn.dataset.ud));
+});
+
+// --- Per-user custom quick-item chips -----------------------------------
+// Each user can add/edit their own chips for the "ud" and "mgmt" rows; they
+// are stored under /users/{uid}/chips/{group} and sync across their devices.
+const GROUP_APPLY = { ud: addUnderlying, mgmt: addMgmtLine };
+let customChips = { ud: [], mgmt: [] };
+let chipsSubscribed = false;
+
+function renderCustomChips(group) {
+  const row = document.getElementById(group + "-chips");
+  if (!row) return;
+  const container = row.querySelector(".custom-chips");
+  container.innerHTML = "";
+  customChips[group].forEach((item, i) => {
+    const chip = document.createElement("span");
+    chip.className = "chip mini custom";
+    const t = document.createElement("span");
+    t.className = "lbl-txt";
+    t.textContent = item;
+    t.addEventListener("click", () => GROUP_APPLY[group](item));
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "x";
+    x.textContent = "✕";
+    x.title = "remove";
+    x.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      customChips[group].splice(i, 1);
+      saveCustomChips(group);
+      renderCustomChips(group);
+    });
+    chip.append(t, x);
+    container.appendChild(chip);
+  });
+}
+
+function saveCustomChips(group) {
+  if (!uid) return;
+  set(ref(db, "users/" + uid + "/chips/" + group), customChips[group]).catch((e) =>
+    console.error("save chips", e)
+  );
+}
+
+function subscribeCustomChips() {
+  if (chipsSubscribed || !db || !uid) return;
+  chipsSubscribed = true;
+  onValue(ref(db, "users/" + uid + "/chips"), (snap) => {
+    const v = snap.val() || {};
+    customChips.ud = v.ud ? Object.values(v.ud) : [];
+    customChips.mgmt = v.mgmt ? Object.values(v.mgmt) : [];
+    renderCustomChips("ud");
+    renderCustomChips("mgmt");
+  });
+}
+
+function addCustomItem(group) {
+  const editor = document.getElementById(group + "-editor");
+  const input = editor.querySelector("input");
+  const val = input.value.trim();
+  if (!val) return;
+  if (!customChips[group].includes(val)) {
+    customChips[group].push(val);
+    saveCustomChips(group);
+    renderCustomChips(group);
+  }
+  input.value = "";
+  input.focus();
+}
+
+// Toggle a row's edit mode (reveals the add-input and per-chip remove ✕).
+document.querySelectorAll("[data-edit]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const group = btn.dataset.edit;
+    const row = document.getElementById(group + "-chips");
+    const editor = document.getElementById(group + "-editor");
+    const on = row.classList.toggle("editing");
+    editor.classList.toggle("hidden", !on);
+    if (on) editor.querySelector("input").focus();
+  });
+});
+document.querySelectorAll("[data-additem]").forEach((btn) => {
+  btn.addEventListener("click", () => addCustomItem(btn.dataset.additem));
+});
+document.querySelectorAll(".chip-editor input").forEach((inp) => {
+  inp.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addCustomItem(inp.closest(".chip-editor").id.replace("-editor", ""));
+    }
+  });
 });
 
 // Septic work-up bundle (a set of management lines).
@@ -636,7 +729,7 @@ sendBtn.addEventListener("click", async () => {
   }
   if (!uid) return;
 
-  const payload = { by: clinician, status: "active", updatedAt: serverTimestamp() };
+  const payload = { by: clinician, byUid: uid, status: "active", updatedAt: serverTimestamp() };
   for (const [key, el] of Object.entries(FIELD_MAP)) {
     payload[key] = el.value.trim();
   }
@@ -674,7 +767,8 @@ function renderStation() {
 
   active.forEach(([id, e]) => {
     const card = document.createElement("div");
-    card.className = "p-card" + (id === selectedId ? " active" : "");
+    card.className =
+      "p-card" + (id === selectedId ? " active" : "") + (isOwn(e) ? " mine" : "");
     card.dataset.id = id;
 
     // Flash if this record changed since we last saw it.
@@ -689,6 +783,12 @@ function renderStation() {
       <div class="cc"></div>
       <div class="foot"><span class="by"></span><span class="t"></span></div>`;
     card.querySelector(".bed").textContent = e.bed || "(no bed)";
+    if (isOwn(e)) {
+      const tag = document.createElement("span");
+      tag.className = "mine-tag";
+      tag.textContent = "mine";
+      card.querySelector(".bed").appendChild(tag);
+    }
     card.querySelector(".cc").textContent = e.complaint || "—";
     card.querySelector(".by").textContent = e.by || "";
     card.querySelector(".t").textContent = relTime(e.updatedAt);
@@ -798,10 +898,22 @@ function vitalsLine(e) {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+// Is this encounter mine? Prefer the stored creator uid; fall back to the
+// display name for records saved before byUid existed.
+function isOwn(e) {
+  return !!e && (e.byUid ? e.byUid === uid : e.by === clinician);
+}
+
+// Active encounters, my own first, then everyone else's — each newest-first.
 function activeSorted() {
   return Object.entries(encounters)
     .filter(([, e]) => e && e.status === "active")
-    .sort((a, b) => (b[1].updatedAt || 0) - (a[1].updatedAt || 0));
+    .sort((a, b) => {
+      const ao = isOwn(a[1]) ? 0 : 1;
+      const bo = isOwn(b[1]) ? 0 : 1;
+      if (ao !== bo) return ao - bo;
+      return (b[1].updatedAt || 0) - (a[1].updatedAt || 0);
+    });
 }
 
 function truncate(s, n) {

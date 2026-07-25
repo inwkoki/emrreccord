@@ -105,6 +105,12 @@
           <button type="button" class="chip mini" data-ud="Thyroid disease">Thyroid</button>
           <button type="button" class="chip mini" data-ud="Gout">Gout</button>
           <button type="button" class="chip mini" data-ud="Malignancy">CA</button>
+          <span class="custom-chips"></span>
+          <button type="button" class="chip mini edit" data-edit="ud" title="Add/edit my chips">✏️</button>
+        </div>
+        <div class="chip-editor hidden" id="ud-editor">
+          <input type="text" placeholder="Add your own underlying…" maxlength="40" autocomplete="off" />
+          <button type="button" class="chip mini" data-additem="ud">＋ Add</button>
         </div>
         <textarea id="f-history" rows="3" placeholder="Onset, associated sx, past history, meds, allergies…"></textarea>
 
@@ -153,6 +159,12 @@
           <button type="button" class="chip mini" data-mgmt="NPO">NPO</button>
           <button type="button" class="chip mini" data-mgmt="Foley catheter">Foley</button>
           <button type="button" class="chip mini set" data-mgmt-set="septic">＋ Septic work-up</button>
+          <span class="custom-chips"></span>
+          <button type="button" class="chip mini edit" data-edit="mgmt" title="Add/edit my chips">✏️</button>
+        </div>
+        <div class="chip-editor hidden" id="mgmt-editor">
+          <input type="text" placeholder="Add your own order…" maxlength="60" autocomplete="off" />
+          <button type="button" class="chip mini" data-additem="mgmt">＋ Add</button>
         </div>
         <textarea id="f-management" rows="4" placeholder="Orders / interventions given…"></textarea>
 

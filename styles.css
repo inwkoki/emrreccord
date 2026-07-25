@@ -156,6 +156,79 @@ body {
   align-self: center;
 }
 
+/* Per-user custom chips */
+.custom-chips {
+  display: contents;
+}
+
+.chip.edit {
+  border-style: dashed;
+  border-color: var(--muted);
+  color: var(--muted);
+  padding: 4px 8px;
+}
+
+.chip.custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  color: #3730a3;
+}
+
+.chip.custom .lbl-txt {
+  cursor: pointer;
+}
+
+.chip.custom .x {
+  display: none;
+  border: none;
+  background: transparent;
+  color: #6366f1;
+  font-size: 12px;
+  padding: 0 2px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.chip-row.editing .chip.custom .x {
+  display: inline;
+}
+
+.chip-editor {
+  display: flex;
+  gap: 6px;
+  margin: -2px 0 8px;
+}
+
+.chip-editor input {
+  flex: 0 1 220px;
+  padding: 7px 10px;
+  font-size: 14px;
+}
+
+/* "Mine" ownership markers */
+.mine-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--primary);
+  background: #ccfbf1;
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.ptab.mine::before {
+  content: "★ ";
+  color: var(--primary);
+}
+
+.ptab.mine.active::before {
+  color: #fff;
+}
+
 /* Vital signs grid */
 .vitals-grid {
   display: grid;
