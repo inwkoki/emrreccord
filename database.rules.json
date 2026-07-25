@@ -42,6 +42,19 @@
         "updatedAt": { ".validate": "newData.val() <= now" },
         "$other":    { ".validate": "newData.isString() && newData.val().length <= 8000" }
       }
+    },
+    "sharedTemplates": {
+      ".read": "auth != null",
+      "$tid": {
+        ".write": "auth != null && (!data.exists() || data.child('byUid').val() === auth.uid) && (!newData.exists() || newData.child('byUid').val() === auth.uid)",
+        "name":   { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "fields": {
+          "$f": { ".validate": "newData.isString() && newData.val().length <= 8000" }
+        },
+        "by":     { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "byUid":  { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "$other": { ".validate": false }
+      }
     }
   }
 }

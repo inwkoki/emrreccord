@@ -91,7 +91,14 @@
         </div>
         <div class="chip-editor hidden" id="save-template-editor">
           <input id="tpl-name" type="text" placeholder="Template name…" maxlength="40" autocomplete="off" />
+          <label class="share-label"><input type="checkbox" id="tpl-share" /> Share with dept</label>
           <button type="button" class="chip mini" id="tpl-save-confirm">Save template</button>
+        </div>
+
+        <!-- Department (shared) templates -->
+        <div class="tpl-bar" id="dept-templates-bar">
+          <span class="tpl-bar-label">Dept templates:</span>
+          <span id="dept-templates" class="custom-chips"></span>
         </div>
 
         <label class="lbl">Bed / identifier <span class="req">*</span></label>
@@ -210,40 +217,54 @@
 
           <!-- Vasopressor -->
           <div class="med-block">
-            <div class="med-title">Vasopressor / inotrope</div>
+            <div class="med-title">Vasopressor / inotrope
+              <button type="button" class="chip mini edit" data-edit="vaso" title="Edit my list">✏️</button>
+            </div>
             <div class="med-controls">
-              <select id="vaso-drug">
-                <option>Norepinephrine</option><option>Adrenaline</option><option>Dopamine</option>
-                <option>Dobutamine</option><option>Vasopressin</option><option>Phenylephrine</option>
-              </select>
+              <select id="vaso-drug"></select>
               <input id="vaso-rate" type="text" placeholder="rate e.g. 0.1 mcg/kg/min" maxlength="30" />
               <button type="button" class="chip mini eb-insert" id="vaso-add">＋ Add</button>
+            </div>
+            <div class="chip-row" id="vaso-chips"><span class="custom-chips"></span></div>
+            <div class="chip-editor hidden" id="vaso-editor">
+              <input type="text" placeholder="Add drug to my list…" maxlength="40" autocomplete="off" />
+              <button type="button" class="chip mini" data-additem="vaso">＋ Add to list</button>
             </div>
           </div>
 
           <!-- IV fluid loading -->
           <div class="med-block">
-            <div class="med-title">IV fluid loading</div>
+            <div class="med-title">IV fluid loading
+              <button type="button" class="chip mini edit" data-edit="fluidtypes" title="Edit my list">✏️</button>
+            </div>
             <div class="med-controls">
-              <select id="load-fluid">
-                <option>NSS</option><option>Acetar</option><option>RLS</option><option>DNSS</option><option>D5W</option>
-              </select>
+              <select id="load-fluid"></select>
               <input id="load-vol" type="text" inputmode="numeric" placeholder="ml" maxlength="6" />
               <span class="med-in">in</span>
               <input id="load-min" type="text" inputmode="numeric" placeholder="min" maxlength="5" />
               <button type="button" class="chip mini eb-insert" id="load-add">＋ Add</button>
             </div>
+            <div class="chip-row" id="fluidtypes-chips"><span class="custom-chips"></span></div>
+            <div class="chip-editor hidden" id="fluidtypes-editor">
+              <input type="text" placeholder="Add fluid to my list…" maxlength="40" autocomplete="off" />
+              <button type="button" class="chip mini" data-additem="fluidtypes">＋ Add to list</button>
+            </div>
           </div>
 
           <!-- Nebulization -->
           <div class="med-block">
-            <div class="med-title">Nebulization</div>
+            <div class="med-title">Nebulization
+              <button type="button" class="chip mini edit" data-edit="neb" title="Edit my list">✏️</button>
+            </div>
             <div class="med-controls neb">
-              <label><input type="checkbox" value="Salbutamol (Ventolin)" /> Salbutamol</label>
-              <label><input type="checkbox" value="Ipratropium (Atrovent)" /> Ipratropium</label>
-              <label><input type="checkbox" value="Berodual" /> Berodual</label>
+              <span id="neb-list" class="neb-list"></span>
               <input id="neb-doses" type="text" inputmode="numeric" placeholder="× doses" maxlength="3" />
               <button type="button" class="chip mini eb-insert" id="neb-add">＋ Add</button>
+            </div>
+            <div class="chip-row" id="neb-chips"><span class="custom-chips"></span></div>
+            <div class="chip-editor hidden" id="neb-editor">
+              <input type="text" placeholder="Add nebulizer drug…" maxlength="40" autocomplete="off" />
+              <button type="button" class="chip mini" data-additem="neb">＋ Add to list</button>
             </div>
           </div>
         </div>

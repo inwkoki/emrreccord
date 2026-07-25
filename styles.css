@@ -285,6 +285,32 @@ body {
   flex: 0 0 70px;
 }
 
+.neb-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.neb-list label {
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.share-label {
+  font-size: 13px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: center;
+}
+
+.share-label input {
+  width: auto;
+}
+
 /* Per-user custom chips */
 .custom-chips {
   display: contents;

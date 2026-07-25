@@ -108,7 +108,7 @@ let currentEncounterId = null; // bedside: which patient is being edited
 let selectedId = null; // station: which patient is shown
 let encounters = {}; // id -> data
 const seenUpdatedAt = {}; // id -> last updatedAt (for flash detection)
-let customChips = { ud: [], mgmt: [], abx: [] }; // per-user custom chip lists
+let customChips = { ud: [], mgmt: [], abx: [], vaso: [], fluidtypes: [], neb: [] };
 let chipsSubscribed = false;
 
 // ---------------------------------------------------------------------------
@@ -275,6 +275,7 @@ onAuthStateChanged(auth, (user) => {
     subscribe();
     subscribeCustomChips();
     subscribeUserTemplates();
+    subscribeDeptTemplates();
     if (role === "bedside" || role === "station") {
       showRole();
     } else {
@@ -513,8 +514,9 @@ document.getElementById("exam-insert").addEventListener("click", () => {
 // A template captures the reusable clinical fields (not bed/vitals) so a user
 // can save "my febrile-neutropenia orders" etc. and re-apply with one tap.
 const TEMPLATE_FIELDS = [
-  "complaint", "history", "exam", "bedside", "oxygen",
-  "management", "antibiotic", "fluid", "consult", "disposition",
+  "complaint", "history", "vBp", "vHr", "vRr", "vSpo2", "vTemp", "vGcs",
+  "oxygen", "exam", "bedside", "management", "antibiotic", "fluid",
+  "consult", "disposition",
 ];
 let userTemplates = {};
 let templatesSubscribed = false;
@@ -555,8 +557,7 @@ function renderMyTemplates() {
   });
 }
 
-function applyTemplate(tid) {
-  const t = userTemplates[tid];
+function applyTemplateObj(t) {
   if (!t || !t.fields) return;
   Object.entries(t.fields).forEach(([field, val]) => {
     const el = FIELD_MAP[field];
@@ -565,6 +566,51 @@ function applyTemplate(tid) {
     else el.value = val;
   });
   setStatus(bedsideStatus, "Applied template: " + (t.name || ""), "ok");
+}
+function applyTemplate(tid) {
+  applyTemplateObj(userTemplates[tid]);
+}
+
+// --- Department (shared) templates --------------------------------------
+let deptTemplates = {};
+let deptSubscribed = false;
+const deptTemplatesEl = document.getElementById("dept-templates");
+
+function subscribeDeptTemplates() {
+  if (deptSubscribed || !db) return;
+  deptSubscribed = true;
+  onValue(ref(db, "sharedTemplates"), (snap) => {
+    deptTemplates = snap.val() || {};
+    renderDeptTemplates();
+  });
+}
+
+function renderDeptTemplates() {
+  deptTemplatesEl.innerHTML = "";
+  Object.entries(deptTemplates).forEach(([tid, t]) => {
+    const chip = document.createElement("span");
+    chip.className = "chip mini custom";
+    const lbl = document.createElement("span");
+    lbl.className = "lbl-txt";
+    lbl.textContent = (t.name || "template") + (t.by ? " · " + t.by : "");
+    lbl.addEventListener("click", () => applyTemplateObj(t));
+    chip.appendChild(lbl);
+    if (t.byUid === uid) {
+      // Only the creator may delete a shared template.
+      const x = document.createElement("button");
+      x.type = "button";
+      x.className = "x";
+      x.textContent = "✕";
+      x.title = "delete";
+      x.style.display = "inline";
+      x.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        set(ref(db, "sharedTemplates/" + tid), null).catch((e) => console.error("del shared", e));
+      });
+      chip.appendChild(x);
+    }
+    deptTemplatesEl.appendChild(chip);
+  });
 }
 
 document.getElementById("save-template").addEventListener("click", () => {
@@ -583,12 +629,20 @@ function saveTemplate() {
     const v = (FIELD_MAP[f].value || "").trim();
     if (v) fields[f] = v;
   });
-  push(ref(db, "users/" + uid + "/templates"), { name, fields }).catch((e) =>
-    console.error("save template", e)
-  );
+  const share = document.getElementById("tpl-share").checked;
+  if (share) {
+    push(ref(db, "sharedTemplates"), { name, fields, by: clinician, byUid: uid }).catch((e) =>
+      console.error("share template", e)
+    );
+  } else {
+    push(ref(db, "users/" + uid + "/templates"), { name, fields }).catch((e) =>
+      console.error("save template", e)
+    );
+  }
   document.getElementById("tpl-name").value = "";
+  document.getElementById("tpl-share").checked = false;
   document.getElementById("save-template-editor").classList.add("hidden");
-  setStatus(bedsideStatus, "Saved template: " + name, "ok");
+  setStatus(bedsideStatus, (share ? "Shared" : "Saved") + " template: " + name, "ok");
 }
 document.getElementById("tpl-save-confirm").addEventListener("click", saveTemplate);
 document.getElementById("tpl-name").addEventListener("keydown", (e) => {
@@ -606,20 +660,49 @@ const DEFAULT_ABX = [
   "Metronidazole", "Vancomycin", "Amoxicillin/Clavulanate", "Gentamicin",
   "Doxycycline", "Cloxacillin",
 ];
-const abxDrug = document.getElementById("abx-drug");
+const DEFAULT_VASO = ["Norepinephrine", "Adrenaline", "Dopamine", "Dobutamine", "Vasopressin", "Phenylephrine"];
+const DEFAULT_FLUIDS = ["NSS", "Acetar", "RLS", "DNSS", "D5W"];
+const DEFAULT_NEB = ["Salbutamol (Ventolin)", "Ipratropium (Atrovent)", "Berodual"];
 
-function renderAbxSelect() {
-  const prev = abxDrug.value;
-  abxDrug.innerHTML = "";
-  DEFAULT_ABX.concat(customChips.abx || []).forEach((name) => {
+// Select-backed med lists: defaults + the user's custom additions.
+const MED_SELECTS = {
+  abx: { el: document.getElementById("abx-drug"), defaults: DEFAULT_ABX },
+  vaso: { el: document.getElementById("vaso-drug"), defaults: DEFAULT_VASO },
+  fluidtypes: { el: document.getElementById("load-fluid"), defaults: DEFAULT_FLUIDS },
+};
+
+function renderMedSelect(group) {
+  const cfg = MED_SELECTS[group];
+  if (!cfg) return;
+  const prev = cfg.el.value;
+  cfg.el.innerHTML = "";
+  cfg.defaults.concat(customChips[group] || []).forEach((name) => {
     const o = document.createElement("option");
     o.value = name;
     o.textContent = name;
-    abxDrug.appendChild(o);
+    cfg.el.appendChild(o);
   });
-  if (prev) abxDrug.value = prev;
+  if (prev) cfg.el.value = prev;
 }
-renderAbxSelect();
+
+// Nebulization is checkbox-backed (multi-select).
+function renderNeb() {
+  const list = document.getElementById("neb-list");
+  const checked = new Set([...list.querySelectorAll("input:checked")].map((c) => c.value));
+  list.innerHTML = "";
+  DEFAULT_NEB.concat(customChips.neb || []).forEach((name) => {
+    const label = document.createElement("label");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.value = name;
+    if (checked.has(name)) cb.checked = true;
+    label.append(cb, document.createTextNode(" " + name.replace(/\s*\(.*\)$/, "")));
+    list.appendChild(label);
+  });
+}
+
+["abx", "vaso", "fluidtypes"].forEach(renderMedSelect);
+renderNeb();
 
 document.getElementById("meds-toggle").addEventListener("click", () => {
   document.getElementById("meds-builder").classList.toggle("hidden");
@@ -660,13 +743,13 @@ document.getElementById("load-add").addEventListener("click", () => {
 
 // Nebulization → append to management
 document.getElementById("neb-add").addEventListener("click", () => {
-  const drugs = [...document.querySelectorAll(".med-controls.neb input[type=checkbox]:checked")].map(
+  const drugs = [...document.querySelectorAll("#neb-list input[type=checkbox]:checked")].map(
     (c) => c.value
   );
   if (!drugs.length) return;
   const doses = document.getElementById("neb-doses").value.trim();
   appendText(fManagement, "- Nebulization: " + drugs.join(" + ") + (doses ? " × " + doses : ""));
-  document.querySelectorAll(".med-controls.neb input[type=checkbox]").forEach((c) => (c.checked = false));
+  document.querySelectorAll("#neb-list input[type=checkbox]").forEach((c) => (c.checked = false));
   document.getElementById("neb-doses").value = "";
 });
 
@@ -730,7 +813,8 @@ function renderCustomChips(group) {
     chip.append(t, x);
     container.appendChild(chip);
   });
-  if (group === "abx") renderAbxSelect();
+  if (MED_SELECTS[group]) renderMedSelect(group);
+  else if (group === "neb") renderNeb();
 }
 
 function saveCustomChips(group) {
@@ -745,12 +829,10 @@ function subscribeCustomChips() {
   chipsSubscribed = true;
   onValue(ref(db, "users/" + uid + "/chips"), (snap) => {
     const v = snap.val() || {};
-    customChips.ud = v.ud ? Object.values(v.ud) : [];
-    customChips.mgmt = v.mgmt ? Object.values(v.mgmt) : [];
-    customChips.abx = v.abx ? Object.values(v.abx) : [];
-    renderCustomChips("ud");
-    renderCustomChips("mgmt");
-    renderCustomChips("abx");
+    ["ud", "mgmt", "abx", "vaso", "fluidtypes", "neb"].forEach((g) => {
+      customChips[g] = v[g] ? Object.values(v[g]) : [];
+      renderCustomChips(g);
+    });
   });
 }
 
