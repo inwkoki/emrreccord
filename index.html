@@ -82,6 +82,18 @@
           <button type="button" class="chip cond" data-cond="trauma">🚑 Trauma</button>
         </div>
 
+        <!-- Per-user saved templates -->
+        <div class="tpl-bar" id="my-templates-bar">
+          <span class="tpl-bar-label">My templates:</span>
+          <span id="my-templates" class="custom-chips"></span>
+          <button type="button" class="chip" id="save-template">💾 Save current</button>
+          <button type="button" class="chip mini edit" id="tpl-edit" title="Delete templates">✏️</button>
+        </div>
+        <div class="chip-editor hidden" id="save-template-editor">
+          <input id="tpl-name" type="text" placeholder="Template name…" maxlength="40" autocomplete="off" />
+          <button type="button" class="chip mini" id="tpl-save-confirm">Save template</button>
+        </div>
+
         <label class="lbl">Bed / identifier <span class="req">*</span></label>
         <input id="f-bed" type="text" placeholder="e.g. Bed 12 / Trolley A" maxlength="40" autocomplete="off" />
 
@@ -173,6 +185,68 @@
           <button type="button" class="chip mini" data-additem="mgmt">＋ Add</button>
         </div>
         <textarea id="f-management" rows="4" placeholder="Orders / interventions given…"></textarea>
+
+        <button type="button" id="meds-toggle" class="chip">💊 Meds builder</button>
+        <div class="meds-builder hidden" id="meds-builder">
+          <!-- Antibiotic -->
+          <div class="med-block">
+            <div class="med-title">Antibiotic
+              <button type="button" class="chip mini edit" data-edit="abx" title="Edit my antibiotic list">✏️</button>
+            </div>
+            <div class="med-controls">
+              <select id="abx-drug"></select>
+              <input id="abx-dose" type="text" placeholder="dose e.g. 2 g" maxlength="30" />
+              <select id="abx-route">
+                <option>IV</option><option>IV drip</option><option>IM</option><option>PO</option><option>PR</option>
+              </select>
+              <button type="button" class="chip mini eb-insert" id="abx-add">＋ Add</button>
+            </div>
+            <div class="chip-row" id="abx-chips"><span class="custom-chips"></span></div>
+            <div class="chip-editor hidden" id="abx-editor">
+              <input type="text" placeholder="Add antibiotic to my list…" maxlength="40" autocomplete="off" />
+              <button type="button" class="chip mini" data-additem="abx">＋ Add to list</button>
+            </div>
+          </div>
+
+          <!-- Vasopressor -->
+          <div class="med-block">
+            <div class="med-title">Vasopressor / inotrope</div>
+            <div class="med-controls">
+              <select id="vaso-drug">
+                <option>Norepinephrine</option><option>Adrenaline</option><option>Dopamine</option>
+                <option>Dobutamine</option><option>Vasopressin</option><option>Phenylephrine</option>
+              </select>
+              <input id="vaso-rate" type="text" placeholder="rate e.g. 0.1 mcg/kg/min" maxlength="30" />
+              <button type="button" class="chip mini eb-insert" id="vaso-add">＋ Add</button>
+            </div>
+          </div>
+
+          <!-- IV fluid loading -->
+          <div class="med-block">
+            <div class="med-title">IV fluid loading</div>
+            <div class="med-controls">
+              <select id="load-fluid">
+                <option>NSS</option><option>Acetar</option><option>RLS</option><option>DNSS</option><option>D5W</option>
+              </select>
+              <input id="load-vol" type="text" inputmode="numeric" placeholder="ml" maxlength="6" />
+              <span class="med-in">in</span>
+              <input id="load-min" type="text" inputmode="numeric" placeholder="min" maxlength="5" />
+              <button type="button" class="chip mini eb-insert" id="load-add">＋ Add</button>
+            </div>
+          </div>
+
+          <!-- Nebulization -->
+          <div class="med-block">
+            <div class="med-title">Nebulization</div>
+            <div class="med-controls neb">
+              <label><input type="checkbox" value="Salbutamol (Ventolin)" /> Salbutamol</label>
+              <label><input type="checkbox" value="Ipratropium (Atrovent)" /> Ipratropium</label>
+              <label><input type="checkbox" value="Berodual" /> Berodual</label>
+              <input id="neb-doses" type="text" inputmode="numeric" placeholder="× doses" maxlength="3" />
+              <button type="button" class="chip mini eb-insert" id="neb-add">＋ Add</button>
+            </div>
+          </div>
+        </div>
 
         <label class="lbl">Antibiotic given</label>
         <input id="f-antibiotic" type="text" placeholder="drug · dose · route · time (per local protocol)" maxlength="200" />

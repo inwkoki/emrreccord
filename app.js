@@ -108,6 +108,8 @@ let currentEncounterId = null; // bedside: which patient is being edited
 let selectedId = null; // station: which patient is shown
 let encounters = {}; // id -> data
 const seenUpdatedAt = {}; // id -> last updatedAt (for flash detection)
+let customChips = { ud: [], mgmt: [], abx: [] }; // per-user custom chip lists
+let chipsSubscribed = false;
 
 // ---------------------------------------------------------------------------
 // Firebase init + config guard
@@ -272,6 +274,7 @@ onAuthStateChanged(auth, (user) => {
     clinician = user.displayName || (user.email || "").split("@")[0] || "Clinician";
     subscribe();
     subscribeCustomChips();
+    subscribeUserTemplates();
     if (role === "bedside" || role === "station") {
       showRole();
     } else {
@@ -506,6 +509,167 @@ document.getElementById("exam-insert").addEventListener("click", () => {
   fExam.focus();
 });
 
+// --- Per-user saved templates -------------------------------------------
+// A template captures the reusable clinical fields (not bed/vitals) so a user
+// can save "my febrile-neutropenia orders" etc. and re-apply with one tap.
+const TEMPLATE_FIELDS = [
+  "complaint", "history", "exam", "bedside", "oxygen",
+  "management", "antibiotic", "fluid", "consult", "disposition",
+];
+let userTemplates = {};
+let templatesSubscribed = false;
+const myTemplatesEl = document.getElementById("my-templates");
+const myTemplatesBar = document.getElementById("my-templates-bar");
+
+function subscribeUserTemplates() {
+  if (templatesSubscribed || !db || !uid) return;
+  templatesSubscribed = true;
+  onValue(ref(db, "users/" + uid + "/templates"), (snap) => {
+    userTemplates = snap.val() || {};
+    renderMyTemplates();
+  });
+}
+
+function renderMyTemplates() {
+  myTemplatesEl.innerHTML = "";
+  Object.entries(userTemplates).forEach(([tid, t]) => {
+    const chip = document.createElement("span");
+    chip.className = "chip mini custom";
+    const lbl = document.createElement("span");
+    lbl.className = "lbl-txt";
+    lbl.textContent = t.name || "template";
+    lbl.addEventListener("click", () => applyTemplate(tid));
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "x";
+    x.textContent = "✕";
+    x.title = "delete";
+    x.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      set(ref(db, "users/" + uid + "/templates/" + tid), null).catch((e) =>
+        console.error("del template", e)
+      );
+    });
+    chip.append(lbl, x);
+    myTemplatesEl.appendChild(chip);
+  });
+}
+
+function applyTemplate(tid) {
+  const t = userTemplates[tid];
+  if (!t || !t.fields) return;
+  Object.entries(t.fields).forEach(([field, val]) => {
+    const el = FIELD_MAP[field];
+    if (!el) return;
+    if (el.tagName === "TEXTAREA") appendText(el, val);
+    else el.value = val;
+  });
+  setStatus(bedsideStatus, "Applied template: " + (t.name || ""), "ok");
+}
+
+document.getElementById("save-template").addEventListener("click", () => {
+  const ed = document.getElementById("save-template-editor");
+  const on = ed.classList.toggle("hidden");
+  if (!on) document.getElementById("tpl-name").focus();
+});
+document.getElementById("tpl-edit").addEventListener("click", () => {
+  myTemplatesBar.classList.toggle("editing");
+});
+function saveTemplate() {
+  const name = document.getElementById("tpl-name").value.trim();
+  if (!name) return;
+  const fields = {};
+  TEMPLATE_FIELDS.forEach((f) => {
+    const v = (FIELD_MAP[f].value || "").trim();
+    if (v) fields[f] = v;
+  });
+  push(ref(db, "users/" + uid + "/templates"), { name, fields }).catch((e) =>
+    console.error("save template", e)
+  );
+  document.getElementById("tpl-name").value = "";
+  document.getElementById("save-template-editor").classList.add("hidden");
+  setStatus(bedsideStatus, "Saved template: " + name, "ok");
+}
+document.getElementById("tpl-save-confirm").addEventListener("click", saveTemplate);
+document.getElementById("tpl-name").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    saveTemplate();
+  }
+});
+
+// --- Meds builder --------------------------------------------------------
+const DEFAULT_ABX = [
+  "Ceftriaxone", "Cefazolin", "Ceftazidime", "Cefotaxime", "Cefoxitin",
+  "Ampicillin/Sulbactam", "Piperacillin/Tazobactam", "Meropenem", "Imipenem",
+  "Ciprofloxacin", "Levofloxacin", "Azithromycin", "Clindamycin",
+  "Metronidazole", "Vancomycin", "Amoxicillin/Clavulanate", "Gentamicin",
+  "Doxycycline", "Cloxacillin",
+];
+const abxDrug = document.getElementById("abx-drug");
+
+function renderAbxSelect() {
+  const prev = abxDrug.value;
+  abxDrug.innerHTML = "";
+  DEFAULT_ABX.concat(customChips.abx || []).forEach((name) => {
+    const o = document.createElement("option");
+    o.value = name;
+    o.textContent = name;
+    abxDrug.appendChild(o);
+  });
+  if (prev) abxDrug.value = prev;
+}
+renderAbxSelect();
+
+document.getElementById("meds-toggle").addEventListener("click", () => {
+  document.getElementById("meds-builder").classList.toggle("hidden");
+});
+
+// Antibiotic → append to the antibiotic field
+document.getElementById("abx-add").addEventListener("click", () => {
+  const drug = abxDrug.value;
+  if (!drug) return;
+  const dose = document.getElementById("abx-dose").value.trim();
+  const route = document.getElementById("abx-route").value;
+  const line = drug + (dose ? " " + dose : "") + " " + route + " @ " + nowTime();
+  const cur = fAntibiotic.value.trim();
+  fAntibiotic.value = cur ? cur + "; " + line : line;
+  document.getElementById("abx-dose").value = "";
+});
+
+// Vasopressor → append to management
+document.getElementById("vaso-add").addEventListener("click", () => {
+  const drug = document.getElementById("vaso-drug").value;
+  const rate = document.getElementById("vaso-rate").value.trim();
+  appendText(fManagement, "- Vasopressor: " + drug + (rate ? " " + rate : "") + " (started " + nowTime() + ")");
+  document.getElementById("vaso-rate").value = "";
+});
+
+// IV fluid loading → append to fluid field
+document.getElementById("load-add").addEventListener("click", () => {
+  const fluid = document.getElementById("load-fluid").value;
+  const vol = document.getElementById("load-vol").value.trim();
+  const min = document.getElementById("load-min").value.trim();
+  if (!vol) return;
+  const line = fluid + " " + vol + " ml IV load" + (min ? " over " + min + " min" : "");
+  const cur = fFluid.value.trim();
+  fFluid.value = cur ? cur + "; " + line : line;
+  document.getElementById("load-vol").value = "";
+  document.getElementById("load-min").value = "";
+});
+
+// Nebulization → append to management
+document.getElementById("neb-add").addEventListener("click", () => {
+  const drugs = [...document.querySelectorAll(".med-controls.neb input[type=checkbox]:checked")].map(
+    (c) => c.value
+  );
+  if (!drugs.length) return;
+  const doses = document.getElementById("neb-doses").value.trim();
+  appendText(fManagement, "- Nebulization: " + drugs.join(" + ") + (doses ? " × " + doses : ""));
+  document.querySelectorAll(".med-controls.neb input[type=checkbox]").forEach((c) => (c.checked = false));
+  document.getElementById("neb-doses").value = "";
+});
+
 // Management quick-pick chips.
 document.querySelectorAll("[data-mgmt]").forEach((btn) => {
   btn.addEventListener("click", () => addMgmtLine(btn.dataset.mgmt));
@@ -538,8 +702,6 @@ document.querySelectorAll("[data-ud]").forEach((btn) => {
 // Each user can add/edit their own chips for the "ud" and "mgmt" rows; they
 // are stored under /users/{uid}/chips/{group} and sync across their devices.
 const GROUP_APPLY = { ud: addUnderlying, mgmt: addMgmtLine };
-let customChips = { ud: [], mgmt: [] };
-let chipsSubscribed = false;
 
 function renderCustomChips(group) {
   const row = document.getElementById(group + "-chips");
@@ -552,7 +714,8 @@ function renderCustomChips(group) {
     const t = document.createElement("span");
     t.className = "lbl-txt";
     t.textContent = item;
-    t.addEventListener("click", () => GROUP_APPLY[group](item));
+    if (GROUP_APPLY[group]) t.addEventListener("click", () => GROUP_APPLY[group](item));
+    else t.style.cursor = "default";
     const x = document.createElement("button");
     x.type = "button";
     x.className = "x";
@@ -567,6 +730,7 @@ function renderCustomChips(group) {
     chip.append(t, x);
     container.appendChild(chip);
   });
+  if (group === "abx") renderAbxSelect();
 }
 
 function saveCustomChips(group) {
@@ -583,8 +747,10 @@ function subscribeCustomChips() {
     const v = snap.val() || {};
     customChips.ud = v.ud ? Object.values(v.ud) : [];
     customChips.mgmt = v.mgmt ? Object.values(v.mgmt) : [];
+    customChips.abx = v.abx ? Object.values(v.abx) : [];
     renderCustomChips("ud");
     renderCustomChips("mgmt");
+    renderCustomChips("abx");
   });
 }
 

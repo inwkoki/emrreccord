@@ -207,6 +207,84 @@ body {
   font-size: 14px;
 }
 
+/* Meds builder */
+.meds-builder {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  margin: 8px 0;
+}
+
+.med-block {
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.med-block:last-child {
+  border-bottom: none;
+}
+
+.med-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+.med-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.med-controls select,
+.med-controls input {
+  padding: 8px 9px;
+  font-size: 14px;
+  width: auto;
+  flex: 0 1 auto;
+}
+
+.med-controls #abx-drug,
+.med-controls #vaso-drug,
+.med-controls #load-fluid {
+  flex: 1 1 130px;
+  min-width: 110px;
+}
+
+.med-controls input[type="text"] {
+  flex: 1 1 90px;
+  min-width: 70px;
+}
+
+.med-in {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.med-controls.neb {
+  gap: 10px;
+}
+
+.med-controls.neb label {
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.med-controls.neb input[type="checkbox"] {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.med-controls.neb input#neb-doses {
+  flex: 0 0 70px;
+}
+
 /* Per-user custom chips */
 .custom-chips {
   display: contents;

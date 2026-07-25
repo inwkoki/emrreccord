@@ -12,6 +12,15 @@
             "$i": { ".validate": "newData.isString() && newData.val().length <= 60" }
           }
         },
+        "templates": {
+          "$tid": {
+            "name":   { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "fields": {
+              "$f": { ".validate": "newData.isString() && newData.val().length <= 8000" }
+            },
+            "$other": { ".validate": false }
+          }
+        },
         "$other":      { ".validate": false }
       }
     },
