@@ -7,6 +7,9 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
   signOut,
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -259,6 +262,64 @@ document.querySelectorAll("[data-signout]").forEach((btn) => {
     role = "";
     localStorage.removeItem("edqc_role");
   });
+});
+
+// --- Account settings: change display name / change PIN -----------------
+const settingsModal = document.getElementById("settings-modal");
+const settingsStatus = document.getElementById("settings-status");
+
+document.querySelectorAll("[data-settings]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.getElementById("set-name").value = clinician;
+    setStatus(settingsStatus, "");
+    settingsModal.classList.remove("hidden");
+  });
+});
+document.getElementById("settings-close").addEventListener("click", () => {
+  settingsModal.classList.add("hidden");
+});
+settingsModal.addEventListener("click", (e) => {
+  if (e.target === settingsModal) settingsModal.classList.add("hidden");
+});
+
+document.getElementById("set-name-save").addEventListener("click", async () => {
+  const name = document.getElementById("set-name").value.trim();
+  if (!name) return setStatus(settingsStatus, "Enter a name.", "error");
+  try {
+    await updateProfile(auth.currentUser, { displayName: name });
+    await set(ref(db, "users/" + uid + "/displayName"), name);
+    clinician = name;
+    roleHello.textContent = clinician;
+    meBedside.textContent = clinician;
+    meStationEl.textContent = clinician;
+    setStatus(settingsStatus, "✓ Name updated (applies to new notes)", "ok");
+  } catch (e) {
+    setStatus(settingsStatus, "Failed: " + (e.code || e.message), "error");
+  }
+});
+
+document.getElementById("set-pin-save").addEventListener("click", async () => {
+  const cur = document.getElementById("set-pin-cur").value.trim();
+  const nw = document.getElementById("set-pin-new").value.trim();
+  const nw2 = document.getElementById("set-pin-new2").value.trim();
+  if (!/^\d{4,8}$/.test(nw)) return setStatus(settingsStatus, "New PIN must be 4–8 digits.", "error");
+  if (nw !== nw2) return setStatus(settingsStatus, "New PINs do not match.", "error");
+  try {
+    const user = auth.currentUser;
+    const cred = EmailAuthProvider.credential(user.email, passwordFor(cur));
+    await reauthenticateWithCredential(user, cred);
+    await updatePassword(user, passwordFor(nw));
+    ["set-pin-cur", "set-pin-new", "set-pin-new2"].forEach((id) => (document.getElementById(id).value = ""));
+    setStatus(settingsStatus, "✓ PIN changed", "ok");
+  } catch (e) {
+    const bad = e.code === "auth/invalid-credential" || e.code === "auth/wrong-password";
+    setStatus(settingsStatus, bad ? "Current PIN is incorrect." : "Failed: " + (e.code || e.message), "error");
+  }
+});
+
+// Forgot-PIN explainer toggle
+document.getElementById("forgot-pin").addEventListener("click", () => {
+  document.getElementById("forgot-note").classList.toggle("hidden");
 });
 
 // ---------------------------------------------------------------------------

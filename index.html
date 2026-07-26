@@ -40,6 +40,13 @@
           <button id="auth-submit" type="submit" class="primary">Sign in</button>
         </form>
         <p id="auth-status" class="status"></p>
+        <button type="button" id="forgot-pin" class="linklike">Forgot PIN?</button>
+        <p id="forgot-note" class="hint hidden">
+          Accounts use a <b>username + PIN</b> (no email), so there's no automatic reset.
+          If you can still sign in on any device, change your PIN anytime in <b>⚙️ Account</b>.
+          If you're fully locked out, ask the system owner to reset it in the Firebase console
+          (Authentication → find your user → Reset password).
+        </p>
 
         <p class="disclaimer">⚠️ Prototype only — <b>not</b> a certified/HIPAA·PDPA-compliant EMR. Do not enter real identifiable patient data until properly secured. Use bed numbers, not names. A PIN is convenience-grade security only.</p>
       </div>
@@ -64,6 +71,7 @@
         <div><span class="dot" id="dot-bedside"></span> 📱 Bedside — <span id="me-bedside"></span></div>
         <div class="topbar-right">
           <button class="ghost-btn" data-switch="station">🖥️ Station</button>
+          <button class="ghost-btn" data-settings title="Account">⚙️</button>
           <button class="ghost-btn" data-signout>Sign out</button>
         </div>
       </header>
@@ -326,6 +334,7 @@
         <div class="topbar-right">
           <span id="me-station" class="muted"></span>
           <button class="ghost-btn" data-switch="bedside">📱 Bedside</button>
+          <button class="ghost-btn" data-settings title="Account">⚙️</button>
           <button class="ghost-btn" data-signout>Sign out</button>
         </div>
       </header>
@@ -359,6 +368,33 @@
         </section>
       </div>
     </section>
+
+    <!-- ================= ACCOUNT SETTINGS ================= -->
+    <div id="settings-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h2>⚙️ Account</h2>
+          <button type="button" id="settings-close" class="ghost-btn">✕</button>
+        </div>
+
+        <label class="lbl">Display name <small class="muted">(shown as “entered by” on notes)</small></label>
+        <input id="set-name" type="text" maxlength="40" autocomplete="off" />
+        <button type="button" id="set-name-save" class="primary full">Save name</button>
+
+        <hr />
+
+        <h3 class="modal-sub">Change PIN</h3>
+        <label class="lbl">Current PIN</label>
+        <input id="set-pin-cur" type="password" inputmode="numeric" pattern="\d*" maxlength="8" autocomplete="current-password" />
+        <label class="lbl">New PIN <small class="muted">(4–8 digits)</small></label>
+        <input id="set-pin-new" type="password" inputmode="numeric" pattern="\d*" maxlength="8" autocomplete="new-password" />
+        <label class="lbl">Confirm new PIN</label>
+        <input id="set-pin-new2" type="password" inputmode="numeric" pattern="\d*" maxlength="8" autocomplete="new-password" />
+        <button type="button" id="set-pin-save" class="primary full">Change PIN</button>
+
+        <p id="settings-status" class="status"></p>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="app.js"></script>
