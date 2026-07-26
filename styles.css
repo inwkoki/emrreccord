@@ -347,7 +347,21 @@ body {
   line-height: 1;
 }
 
-.chip-row.editing .chip.custom .x {
+.chip.custom .mv {
+  display: none;
+  border: none;
+  background: transparent;
+  color: #6366f1;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0 1px;
+  cursor: pointer;
+}
+
+.chip-row.editing .chip.custom .x,
+.chip-row.editing .chip.custom .mv,
+#my-templates-bar.editing .chip.custom .x,
+#my-templates-bar.editing .chip.custom .mv {
   display: inline;
 }
 

@@ -201,7 +201,8 @@
               <button type="button" class="chip mini edit" data-edit="abx" title="Edit my antibiotic list">✏️</button>
             </div>
             <div class="med-controls">
-              <select id="abx-drug"></select>
+              <input id="abx-drug" list="abx-datalist" type="text" placeholder="type to search…" autocomplete="off" maxlength="40" />
+              <datalist id="abx-datalist"></datalist>
               <input id="abx-dose" type="text" placeholder="dose e.g. 2 g" maxlength="30" />
               <select id="abx-route">
                 <option>IV</option><option>IV drip</option><option>IM</option><option>PO</option><option>PR</option>

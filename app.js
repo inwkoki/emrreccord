@@ -532,27 +532,65 @@ function subscribeUserTemplates() {
   });
 }
 
+let editingTemplate = null; // {id, shared} while editing an existing template
+
+function mkBtn(cls, txt, title, handler) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = cls;
+  b.textContent = txt;
+  b.title = title;
+  b.addEventListener("click", handler);
+  return b;
+}
+
+function sortedTemplateEntries(obj) {
+  return Object.entries(obj).sort((a, b) => (a[1].order ?? 9999) - (b[1].order ?? 9999));
+}
+
+function reorderTemplate(id, dir) {
+  const sorted = sortedTemplateEntries(userTemplates);
+  const idx = sorted.findIndex(([tid]) => tid === id);
+  const swap = dir === "up" ? idx - 1 : idx + 1;
+  if (swap < 0 || swap >= sorted.length) return;
+  [sorted[idx], sorted[swap]] = [sorted[swap], sorted[idx]];
+  const updates = {};
+  sorted.forEach(([tid], i) => (updates["users/" + uid + "/templates/" + tid + "/order"] = i));
+  update(ref(db), updates).catch((e) => console.error("reorder", e));
+}
+
+function loadTemplateForEdit(id, shared, t) {
+  clearForm();
+  applyTemplateObj(t);
+  editingTemplate = { id, shared };
+  document.getElementById("save-template-editor").classList.remove("hidden");
+  document.getElementById("tpl-name").value = t.name || "";
+  const shareCb = document.getElementById("tpl-share");
+  shareCb.checked = shared;
+  shareCb.disabled = true; // scope is fixed while editing
+  document.getElementById("tpl-save-confirm").textContent = "Update template";
+  setStatus(bedsideStatus, "Editing “" + (t.name || "") + "” — change fields, then Update", "ok");
+}
+
 function renderMyTemplates() {
   myTemplatesEl.innerHTML = "";
-  Object.entries(userTemplates).forEach(([tid, t]) => {
+  sortedTemplateEntries(userTemplates).forEach(([tid, t]) => {
     const chip = document.createElement("span");
     chip.className = "chip mini custom";
     const lbl = document.createElement("span");
     lbl.className = "lbl-txt";
     lbl.textContent = t.name || "template";
     lbl.addEventListener("click", () => applyTemplate(tid));
-    const x = document.createElement("button");
-    x.type = "button";
-    x.className = "x";
-    x.textContent = "✕";
-    x.title = "delete";
-    x.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      set(ref(db, "users/" + uid + "/templates/" + tid), null).catch((e) =>
-        console.error("del template", e)
-      );
-    });
-    chip.append(lbl, x);
+    chip.appendChild(lbl);
+    chip.append(
+      mkBtn("mv", "▲", "move up", (ev) => { ev.stopPropagation(); reorderTemplate(tid, "up"); }),
+      mkBtn("mv", "▼", "move down", (ev) => { ev.stopPropagation(); reorderTemplate(tid, "down"); }),
+      mkBtn("x", "✎", "edit", (ev) => { ev.stopPropagation(); loadTemplateForEdit(tid, false, t); }),
+      mkBtn("x", "✕", "delete", (ev) => {
+        ev.stopPropagation();
+        set(ref(db, "users/" + uid + "/templates/" + tid), null).catch((e) => console.error("del template", e));
+      })
+    );
     myTemplatesEl.appendChild(chip);
   });
 }
@@ -596,27 +634,41 @@ function renderDeptTemplates() {
     lbl.addEventListener("click", () => applyTemplateObj(t));
     chip.appendChild(lbl);
     if (t.byUid === uid) {
-      // Only the creator may delete a shared template.
-      const x = document.createElement("button");
-      x.type = "button";
-      x.className = "x";
-      x.textContent = "✕";
-      x.title = "delete";
-      x.style.display = "inline";
-      x.addEventListener("click", (ev) => {
+      // Only the creator may edit or delete a shared template.
+      const edit = mkBtn("x", "✎", "edit", (ev) => {
+        ev.stopPropagation();
+        loadTemplateForEdit(tid, true, t);
+      });
+      const del = mkBtn("x", "✕", "delete", (ev) => {
         ev.stopPropagation();
         set(ref(db, "sharedTemplates/" + tid), null).catch((e) => console.error("del shared", e));
       });
-      chip.appendChild(x);
+      edit.style.display = "inline";
+      del.style.display = "inline";
+      chip.append(edit, del);
     }
     deptTemplatesEl.appendChild(chip);
   });
 }
 
+function resetTemplateEditor() {
+  editingTemplate = null;
+  document.getElementById("tpl-name").value = "";
+  const shareCb = document.getElementById("tpl-share");
+  shareCb.checked = false;
+  shareCb.disabled = false;
+  document.getElementById("tpl-save-confirm").textContent = "Save template";
+  document.getElementById("save-template-editor").classList.add("hidden");
+}
+
 document.getElementById("save-template").addEventListener("click", () => {
   const ed = document.getElementById("save-template-editor");
-  const on = ed.classList.toggle("hidden");
-  if (!on) document.getElementById("tpl-name").focus();
+  const willShow = ed.classList.contains("hidden");
+  resetTemplateEditor(); // start a fresh (non-editing) save
+  if (willShow) {
+    ed.classList.remove("hidden");
+    document.getElementById("tpl-name").focus();
+  }
 });
 document.getElementById("tpl-edit").addEventListener("click", () => {
   myTemplatesBar.classList.toggle("editing");
@@ -630,19 +682,35 @@ function saveTemplate() {
     if (v) fields[f] = v;
   });
   const share = document.getElementById("tpl-share").checked;
-  if (share) {
+
+  if (editingTemplate) {
+    // Update an existing template in place, keeping its scope and sort order.
+    const payload = editingTemplate.shared
+      ? { name, fields, by: clinician, byUid: uid }
+      : { name, fields };
+    const existing = editingTemplate.shared
+      ? deptTemplates[editingTemplate.id]
+      : userTemplates[editingTemplate.id];
+    if (!editingTemplate.shared && existing && typeof existing.order === "number") {
+      payload.order = existing.order;
+    }
+    const path = editingTemplate.shared
+      ? "sharedTemplates/" + editingTemplate.id
+      : "users/" + uid + "/templates/" + editingTemplate.id;
+    set(ref(db, path), payload).catch((e) => console.error("update template", e));
+    setStatus(bedsideStatus, "Updated template: " + name, "ok");
+  } else if (share) {
     push(ref(db, "sharedTemplates"), { name, fields, by: clinician, byUid: uid }).catch((e) =>
       console.error("share template", e)
     );
+    setStatus(bedsideStatus, "Shared template: " + name, "ok");
   } else {
     push(ref(db, "users/" + uid + "/templates"), { name, fields }).catch((e) =>
       console.error("save template", e)
     );
+    setStatus(bedsideStatus, "Saved template: " + name, "ok");
   }
-  document.getElementById("tpl-name").value = "";
-  document.getElementById("tpl-share").checked = false;
-  document.getElementById("save-template-editor").classList.add("hidden");
-  setStatus(bedsideStatus, (share ? "Shared" : "Saved") + " template: " + name, "ok");
+  resetTemplateEditor();
 }
 document.getElementById("tpl-save-confirm").addEventListener("click", saveTemplate);
 document.getElementById("tpl-name").addEventListener("keydown", (e) => {
@@ -664,9 +732,9 @@ const DEFAULT_VASO = ["Norepinephrine", "Adrenaline", "Dopamine", "Dobutamine", 
 const DEFAULT_FLUIDS = ["NSS", "Acetar", "RLS", "DNSS", "D5W"];
 const DEFAULT_NEB = ["Salbutamol (Ventolin)", "Ipratropium (Atrovent)", "Berodual"];
 
-// Select-backed med lists: defaults + the user's custom additions.
+// Select-backed med lists: the user's custom (favourite) items come first,
+// then the built-in defaults.
 const MED_SELECTS = {
-  abx: { el: document.getElementById("abx-drug"), defaults: DEFAULT_ABX },
   vaso: { el: document.getElementById("vaso-drug"), defaults: DEFAULT_VASO },
   fluidtypes: { el: document.getElementById("load-fluid"), defaults: DEFAULT_FLUIDS },
 };
@@ -676,7 +744,7 @@ function renderMedSelect(group) {
   if (!cfg) return;
   const prev = cfg.el.value;
   cfg.el.innerHTML = "";
-  cfg.defaults.concat(customChips[group] || []).forEach((name) => {
+  (customChips[group] || []).concat(cfg.defaults).forEach((name) => {
     const o = document.createElement("option");
     o.value = name;
     o.textContent = name;
@@ -685,12 +753,23 @@ function renderMedSelect(group) {
   if (prev) cfg.el.value = prev;
 }
 
+// Antibiotic is a searchable input backed by a datalist.
+function renderAbxList() {
+  const dl = document.getElementById("abx-datalist");
+  dl.innerHTML = "";
+  (customChips.abx || []).concat(DEFAULT_ABX).forEach((name) => {
+    const o = document.createElement("option");
+    o.value = name;
+    dl.appendChild(o);
+  });
+}
+
 // Nebulization is checkbox-backed (multi-select).
 function renderNeb() {
   const list = document.getElementById("neb-list");
   const checked = new Set([...list.querySelectorAll("input:checked")].map((c) => c.value));
   list.innerHTML = "";
-  DEFAULT_NEB.concat(customChips.neb || []).forEach((name) => {
+  (customChips.neb || []).concat(DEFAULT_NEB).forEach((name) => {
     const label = document.createElement("label");
     const cb = document.createElement("input");
     cb.type = "checkbox";
@@ -701,7 +780,8 @@ function renderNeb() {
   });
 }
 
-["abx", "vaso", "fluidtypes"].forEach(renderMedSelect);
+renderAbxList();
+["vaso", "fluidtypes"].forEach(renderMedSelect);
 renderNeb();
 
 document.getElementById("meds-toggle").addEventListener("click", () => {
@@ -710,13 +790,14 @@ document.getElementById("meds-toggle").addEventListener("click", () => {
 
 // Antibiotic → append to the antibiotic field
 document.getElementById("abx-add").addEventListener("click", () => {
-  const drug = abxDrug.value;
+  const drug = document.getElementById("abx-drug").value.trim();
   if (!drug) return;
   const dose = document.getElementById("abx-dose").value.trim();
   const route = document.getElementById("abx-route").value;
   const line = drug + (dose ? " " + dose : "") + " " + route + " @ " + nowTime();
   const cur = fAntibiotic.value.trim();
   fAntibiotic.value = cur ? cur + "; " + line : line;
+  document.getElementById("abx-drug").value = "";
   document.getElementById("abx-dose").value = "";
 });
 
@@ -799,6 +880,35 @@ function renderCustomChips(group) {
     t.textContent = item;
     if (GROUP_APPLY[group]) t.addEventListener("click", () => GROUP_APPLY[group](item));
     else t.style.cursor = "default";
+
+    // Reorder controls (shown in edit mode).
+    const up = document.createElement("button");
+    up.type = "button";
+    up.className = "mv";
+    up.textContent = "▲";
+    up.title = "move up";
+    up.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      if (i > 0) {
+        [customChips[group][i - 1], customChips[group][i]] = [customChips[group][i], customChips[group][i - 1]];
+        saveCustomChips(group);
+        renderCustomChips(group);
+      }
+    });
+    const down = document.createElement("button");
+    down.type = "button";
+    down.className = "mv";
+    down.textContent = "▼";
+    down.title = "move down";
+    down.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      if (i < customChips[group].length - 1) {
+        [customChips[group][i + 1], customChips[group][i]] = [customChips[group][i], customChips[group][i + 1]];
+        saveCustomChips(group);
+        renderCustomChips(group);
+      }
+    });
+
     const x = document.createElement("button");
     x.type = "button";
     x.className = "x";
@@ -810,10 +920,11 @@ function renderCustomChips(group) {
       saveCustomChips(group);
       renderCustomChips(group);
     });
-    chip.append(t, x);
+    chip.append(t, up, down, x);
     container.appendChild(chip);
   });
-  if (MED_SELECTS[group]) renderMedSelect(group);
+  if (group === "abx") renderAbxList();
+  else if (MED_SELECTS[group]) renderMedSelect(group);
   else if (group === "neb") renderNeb();
 }
 

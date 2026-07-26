@@ -18,6 +18,7 @@
             "fields": {
               "$f": { ".validate": "newData.isString() && newData.val().length <= 8000" }
             },
+            "order":  { ".validate": "newData.isNumber()" },
             "$other": { ".validate": false }
           }
         },
