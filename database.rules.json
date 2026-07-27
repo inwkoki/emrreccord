@@ -10,7 +10,7 @@
         "normalPe":    { ".validate": "newData.isString() && newData.val().length <= 4000" },
         "chips": {
           "$group": {
-            "$i": { ".validate": "newData.isString() && newData.val().length <= 60" }
+            "$i": { ".validate": "newData.isString() && newData.val().length <= 200" }
           }
         },
         "templates": {

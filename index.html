@@ -177,7 +177,17 @@
         <div class="exam-builder hidden" id="exam-builder">
           <div id="exam-builder-rows"></div>
           <pre id="exam-preview" class="exam-preview"></pre>
-          <button type="button" id="exam-insert" class="chip eb-insert">⬇ Fill exam from picks</button>
+          <div class="eb-actions">
+            <button type="button" id="exam-insert" class="chip eb-insert">⬇ Fill exam from picks</button>
+            <button type="button" id="exam-clear" class="chip mini">🧹 Clear</button>
+            <button type="button" id="exam-edit-toggle" class="chip mini">✏️ Edit lists</button>
+          </div>
+          <div class="chip-editor hidden" id="exam-opt-editor">
+            <select id="exam-opt-sys"></select>
+            <input id="exam-opt-input" type="text" placeholder="Add option to this system…" maxlength="120" autocomplete="off" />
+            <button type="button" id="exam-opt-add" class="chip mini">＋ Add</button>
+          </div>
+          <div class="chip-row hidden" id="exam-opt-chips"><span class="custom-chips"></span></div>
         </div>
         <textarea id="f-exam" rows="7" placeholder="Vitals, general, CVS, resp, abdo, neuro…"></textarea>
 

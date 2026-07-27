@@ -112,7 +112,10 @@ let currentEncounterId = null; // bedside: which patient is being edited
 let selectedId = null; // station: which patient is shown
 let encounters = {}; // id -> data
 const seenUpdatedAt = {}; // id -> last updatedAt (for flash detection)
-let customChips = { ud: [], mgmt: [], abx: [], vaso: [], fluidtypes: [], neb: [] };
+let customChips = {
+  ud: [], mgmt: [], abx: [], vaso: [], fluidtypes: [], neb: [],
+  ex0: [], ex1: [], ex2: [], ex3: [], ex4: [], ex5: [], ex6: [], // exam-builder per-system options
+};
 let chipsSubscribed = false;
 let customNormalPe = ""; // per-user editable "Normal" physical-exam text
 
@@ -721,15 +724,55 @@ EXAM_SYSTEMS.forEach(([sys, opts], i) => {
   input.placeholder = "type or pick…";
   const dl = document.createElement("datalist");
   dl.id = "eb-dl-" + i;
-  opts.forEach((o) => {
+  input.addEventListener("input", updateExamPreview);
+  row.append(label, input, dl);
+  examBuilderRows.appendChild(row);
+  renderExamDatalist(i);
+  const o = document.createElement("option"); // system in the edit-list selector
+  o.value = i;
+  o.textContent = sys;
+  document.getElementById("exam-opt-sys").appendChild(o);
+});
+
+// Datalist options for a system = built-in defaults + the user's custom options.
+function renderExamDatalist(i) {
+  const dl = document.getElementById("eb-dl-" + i);
+  if (!dl || !EXAM_SYSTEMS[i]) return;
+  dl.innerHTML = "";
+  EXAM_SYSTEMS[i][1].concat(customChips["ex" + i] || []).forEach((o) => {
     const opt = document.createElement("option");
     opt.value = o;
     dl.appendChild(opt);
   });
-  input.addEventListener("input", updateExamPreview);
-  row.append(label, input, dl);
-  examBuilderRows.appendChild(row);
-});
+}
+
+// Removable chips for the currently-selected system's custom options.
+function renderExamOptChips(idx) {
+  const container = document.querySelector("#exam-opt-chips .custom-chips");
+  if (!container) return;
+  container.innerHTML = "";
+  (customChips["ex" + idx] || []).forEach((item, j) => {
+    const chip = document.createElement("span");
+    chip.className = "chip mini custom";
+    const t = document.createElement("span");
+    t.className = "lbl-txt";
+    t.textContent = item;
+    t.style.cursor = "default";
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "x";
+    x.textContent = "✕";
+    x.style.display = "inline";
+    x.addEventListener("click", () => {
+      customChips["ex" + idx].splice(j, 1);
+      saveCustomChips("ex" + idx);
+      renderExamOptChips(idx);
+      renderExamDatalist(idx);
+    });
+    chip.append(t, x);
+    container.appendChild(chip);
+  });
+}
 
 function composeExam() {
   const lines = [];
@@ -753,6 +796,48 @@ document.getElementById("exam-insert").addEventListener("click", () => {
   appendText(fExam, composeExam());
   examBuilder.classList.add("hidden");
   fExam.focus();
+});
+
+// Clear all builder fields (empty every system).
+document.getElementById("exam-clear").addEventListener("click", () => {
+  examBuilderRows.querySelectorAll("input[data-sys]").forEach((inp) => (inp.value = ""));
+  updateExamPreview();
+});
+
+// Edit-lists: add/remove custom dropdown options per system.
+document.getElementById("exam-edit-toggle").addEventListener("click", () => {
+  const ed = document.getElementById("exam-opt-editor");
+  const chips = document.getElementById("exam-opt-chips");
+  const show = ed.classList.contains("hidden");
+  ed.classList.toggle("hidden", !show);
+  chips.classList.toggle("hidden", !show);
+  if (show) renderExamOptChips(parseInt(document.getElementById("exam-opt-sys").value || "0", 10));
+});
+document.getElementById("exam-opt-sys").addEventListener("change", (e) => {
+  renderExamOptChips(parseInt(e.target.value, 10));
+});
+function addExamOption() {
+  const idx = parseInt(document.getElementById("exam-opt-sys").value || "0", 10);
+  const inp = document.getElementById("exam-opt-input");
+  const val = inp.value.trim();
+  if (!val) return;
+  const g = "ex" + idx;
+  if (!customChips[g]) customChips[g] = [];
+  if (!customChips[g].includes(val)) {
+    customChips[g].push(val);
+    saveCustomChips(g);
+    renderExamOptChips(idx);
+    renderExamDatalist(idx);
+  }
+  inp.value = "";
+  inp.focus();
+}
+document.getElementById("exam-opt-add").addEventListener("click", addExamOption);
+document.getElementById("exam-opt-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    addExamOption();
+  }
 });
 
 // --- Per-user saved templates -------------------------------------------
@@ -1189,10 +1274,12 @@ function subscribeCustomChips() {
   chipsSubscribed = true;
   onValue(ref(db, "users/" + uid + "/chips"), (snap) => {
     const v = snap.val() || {};
-    ["ud", "mgmt", "abx", "vaso", "fluidtypes", "neb"].forEach((g) => {
+    ["ud", "mgmt", "abx", "vaso", "fluidtypes", "neb",
+     "ex0", "ex1", "ex2", "ex3", "ex4", "ex5", "ex6"].forEach((g) => {
       customChips[g] = v[g] ? Object.values(v[g]) : [];
       renderCustomChips(g);
     });
+    [0, 1, 2, 3, 4, 5, 6].forEach(renderExamDatalist);
   });
   onValue(ref(db, "users/" + uid + "/normalPe"), (snap) => {
     customNormalPe = snap.val() || "";
