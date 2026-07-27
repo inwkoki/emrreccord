@@ -103,6 +103,11 @@
           <label class="share-label"><input type="checkbox" id="tpl-share" /> Share with dept</label>
           <button type="button" class="chip mini" id="tpl-save-confirm">Save template</button>
         </div>
+        <p id="macro-hint" class="hint hidden">
+          💡 <b>Auto-time macros</b> — type these in any field before saving; they fill in when the template is applied:
+          <code>{{now}}</code> current time · <code>{{now+2h}}</code> 2 h later · <code>{{now+30m}}</code> 30 min later · <code>{{date}}</code> today.
+          <br />Example: “Observe for 2 hours (until {{now+2h}})”.
+        </p>
 
         <!-- Department (shared) templates -->
         <div class="tpl-bar" id="dept-templates-bar">
@@ -580,6 +585,13 @@
         <label class="lbl">Confirm new PIN</label>
         <input id="set-pin-new2" type="password" inputmode="numeric" pattern="\d*" maxlength="8" autocomplete="new-password" />
         <button type="button" id="set-pin-save" class="primary full">Change PIN</button>
+
+        <hr />
+
+        <h3 class="modal-sub">My “Normal” physical exam</h3>
+        <p class="muted" style="font-size:12px;margin:4px 0 6px;">Used by the ＋ Normal button on the exam field.</p>
+        <textarea id="set-normal-pe" rows="6"></textarea>
+        <button type="button" id="set-normal-pe-save" class="primary full">Save normal exam</button>
 
         <p id="settings-status" class="status"></p>
       </div>

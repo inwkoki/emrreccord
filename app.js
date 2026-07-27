@@ -114,6 +114,7 @@ let encounters = {}; // id -> data
 const seenUpdatedAt = {}; // id -> last updatedAt (for flash detection)
 let customChips = { ud: [], mgmt: [], abx: [], vaso: [], fluidtypes: [], neb: [] };
 let chipsSubscribed = false;
+let customNormalPe = ""; // per-user editable "Normal" physical-exam text
 
 // ---------------------------------------------------------------------------
 // Firebase init + config guard
@@ -272,9 +273,21 @@ const settingsStatus = document.getElementById("settings-status");
 document.querySelectorAll("[data-settings]").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.getElementById("set-name").value = clinician;
+    document.getElementById("set-normal-pe").value = customNormalPe || NORMAL_PE;
     setStatus(settingsStatus, "");
     settingsModal.classList.remove("hidden");
   });
+});
+
+document.getElementById("set-normal-pe-save").addEventListener("click", async () => {
+  const txt = document.getElementById("set-normal-pe").value.trim();
+  try {
+    await set(ref(db, "users/" + uid + "/normalPe"), txt);
+    customNormalPe = txt;
+    setStatus(settingsStatus, "✓ Normal exam saved", "ok");
+  } catch (e) {
+    setStatus(settingsStatus, "Failed: " + (e.code || e.message), "error");
+  }
 });
 document.getElementById("settings-close").addEventListener("click", () => {
   settingsModal.classList.add("hidden");
@@ -672,7 +685,7 @@ const NORMAL_PE = [
 ].join("\n");
 
 document.getElementById("tpl-exam").addEventListener("click", () => {
-  appendText(fExam, NORMAL_PE);
+  appendText(fExam, customNormalPe || NORMAL_PE);
   fExam.focus();
 });
 
@@ -792,6 +805,7 @@ function loadTemplateForEdit(id, shared, t) {
   applyTemplateObj(t);
   editingTemplate = { id, shared };
   document.getElementById("save-template-editor").classList.remove("hidden");
+  document.getElementById("macro-hint").classList.remove("hidden");
   document.getElementById("tpl-name").value = t.name || "";
   const shareCb = document.getElementById("tpl-share");
   shareCb.checked = shared;
@@ -828,8 +842,9 @@ function applyTemplateObj(t) {
   Object.entries(t.fields).forEach(([field, val]) => {
     const el = FIELD_MAP[field];
     if (!el) return;
-    if (el.tagName === "TEXTAREA") appendText(el, val);
-    else el.value = val;
+    const v = expandMacros(val); // resolve {{now+2h}} etc. at apply time
+    if (el.tagName === "TEXTAREA") appendText(el, v);
+    else el.value = v;
   });
   setStatus(bedsideStatus, "Applied template: " + (t.name || ""), "ok");
 }
@@ -887,6 +902,7 @@ function resetTemplateEditor() {
   shareCb.disabled = false;
   document.getElementById("tpl-save-confirm").textContent = "Save template";
   document.getElementById("save-template-editor").classList.add("hidden");
+  document.getElementById("macro-hint").classList.add("hidden");
 }
 
 document.getElementById("save-template").addEventListener("click", () => {
@@ -895,6 +911,7 @@ document.getElementById("save-template").addEventListener("click", () => {
   resetTemplateEditor(); // start a fresh (non-editing) save
   if (willShow) {
     ed.classList.remove("hidden");
+    document.getElementById("macro-hint").classList.remove("hidden");
     document.getElementById("tpl-name").focus();
   }
 });
@@ -1172,6 +1189,9 @@ function subscribeCustomChips() {
       customChips[g] = v[g] ? Object.values(v[g]) : [];
       renderCustomChips(g);
     });
+  });
+  onValue(ref(db, "users/" + uid + "/normalPe"), (snap) => {
+    customNormalPe = snap.val() || "";
   });
 }
 
@@ -1578,6 +1598,29 @@ function nowTime() {
 function timePlusHours(h) {
   const d = new Date(Date.now() + h * 3600 * 1000);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+// Expand dynamic macros in template text so users can build time-aware
+// templates (like anaphylaxis "observe until {{now+2h}}") without any code.
+// Supported: {{now}}, {{now+2h}}, {{now+30m}}, {{now-1h}}, {{date}}, {{datetime}}
+function expandMacros(text) {
+  if (!text) return text;
+  return text.replace(
+    /\{\{\s*(now|date|datetime)\s*([+-]\s*\d+\s*[hm])?\s*\}\}/gi,
+    (_, base, delta) => {
+      let d = new Date();
+      if (delta) {
+        const clean = delta.replace(/\s+/g, "");
+        const sign = clean[0] === "-" ? -1 : 1;
+        const num = parseInt(clean.slice(1), 10);
+        const unit = clean.slice(-1).toLowerCase();
+        d = new Date(d.getTime() + sign * num * (unit === "h" ? 3600000 : 60000));
+      }
+      if (/^date$/i.test(base)) return d.toLocaleDateString();
+      if (/^datetime$/i.test(base)) return d.toLocaleString();
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+  );
 }
 
 function fullTime(ts) {
