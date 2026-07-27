@@ -706,32 +706,36 @@ const examBuilderRows = document.getElementById("exam-builder-rows");
 const examPreview = document.getElementById("exam-preview");
 
 // Build the rows once.
-EXAM_SYSTEMS.forEach(([sys, opts]) => {
+EXAM_SYSTEMS.forEach(([sys, opts], i) => {
   const row = document.createElement("div");
   row.className = "eb-row";
   const label = document.createElement("span");
   label.textContent = sys;
-  const sel = document.createElement("select");
-  sel.dataset.sys = sys;
+  // Combobox: pick a common phrase from the list OR type anything.
+  const input = document.createElement("input");
+  input.type = "text";
+  input.dataset.sys = sys;
+  input.setAttribute("list", "eb-dl-" + i);
+  input.value = opts[0]; // default to the normal finding
+  input.autocomplete = "off";
+  input.placeholder = "type or pick…";
+  const dl = document.createElement("datalist");
+  dl.id = "eb-dl-" + i;
   opts.forEach((o) => {
     const opt = document.createElement("option");
     opt.value = o;
-    opt.textContent = o;
-    sel.appendChild(opt);
+    dl.appendChild(opt);
   });
-  const skip = document.createElement("option");
-  skip.value = "";
-  skip.textContent = "(skip)";
-  sel.appendChild(skip);
-  sel.addEventListener("change", updateExamPreview);
-  row.append(label, sel);
+  input.addEventListener("input", updateExamPreview);
+  row.append(label, input, dl);
   examBuilderRows.appendChild(row);
 });
 
 function composeExam() {
   const lines = [];
-  examBuilderRows.querySelectorAll("select").forEach((sel) => {
-    if (sel.value) lines.push(sel.dataset.sys + ": " + sel.value);
+  examBuilderRows.querySelectorAll("input[data-sys]").forEach((inp) => {
+    const v = inp.value.trim();
+    if (v) lines.push(inp.dataset.sys + ": " + v);
   });
   return lines.join("\n");
 }

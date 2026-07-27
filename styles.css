@@ -179,7 +179,8 @@ body {
   color: #334155;
 }
 
-.eb-row select {
+.eb-row select,
+.eb-row input {
   padding: 9px 10px;
   font-size: 14px;
 }
