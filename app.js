@@ -44,6 +44,7 @@ const authScreen = $("auth-screen");
 const roleScreen = $("role-screen");
 const bedsideScreen = $("bedside-screen");
 const stationScreen = $("station-screen");
+const cprScreen = $("cpr-screen");
 
 // Auth screen
 const authForm = $("auth-form");
@@ -322,6 +323,171 @@ document.getElementById("forgot-pin").addEventListener("click", () => {
   document.getElementById("forgot-note").classList.toggle("hidden");
 });
 
+// --- CPR record ----------------------------------------------------------
+const cprForm = document.getElementById("cpr-form");
+const cprStatus = document.getElementById("cpr-status");
+
+function gatherCprState() {
+  const fd = new FormData(cprForm);
+  const s = {};
+  for (const [k, v] of fd.entries()) {
+    if (v === "") continue;
+    if (k in s) {
+      if (!Array.isArray(s[k])) s[k] = [s[k]];
+      s[k].push(v);
+    } else s[k] = v;
+  }
+  return s;
+}
+
+function populateCpr(state) {
+  cprForm.reset();
+  if (!state) return;
+  cprForm.querySelectorAll("input, textarea, select").forEach((el) => {
+    const val = state[el.name];
+    if (val === undefined) return;
+    if (el.type === "radio" || el.type === "checkbox") {
+      const arr = Array.isArray(val) ? val : [val];
+      el.checked = arr.includes(el.value);
+    } else {
+      el.value = Array.isArray(val) ? val[0] : val;
+    }
+  });
+}
+
+function composeCprNote(s) {
+  if (!s || !Object.keys(s).length) return "";
+  const g = (k) => {
+    const v = s[k];
+    return Array.isArray(v) ? v.join(", ") : v || "";
+  };
+  const withNote = (main, note, sep) => (main ? main + (note ? (sep || " — ") + note : "") : note);
+  const L = (label, val) => (val ? label + ": " + val + "\n" : "");
+  const parts = [];
+  parts.push("=== CPR / RESUSCITATION RECORD ===");
+  let a = "";
+  a += L("Arrival", withNote(g("arrival"), g("arrival_other")));
+  a += L("Place of arrest", g("place"));
+  a += L("Est. time of arrest", g("arrest_time"));
+  a += L("Witnessed", g("witnessed"));
+  a += L("Bystander CPR", g("bystander"));
+  a += L("Initiated by", g("initiator"));
+  a += L("AED used", g("aed"));
+  if (a) parts.push(a.trim());
+  if (g("prehosp")) parts.push("Pre-hospital: " + g("prehosp"));
+  if (g("history")) parts.push("History:\n" + g("history"));
+  if (g("ud") || g("ud_other")) parts.push("Underlying: " + withNote(g("ud"), g("ud_other"), ", "));
+
+  let r = "";
+  r += L("First rhythm", withNote(g("first_rhythm"), g("first_rhythm_note"), " "));
+  r += L("Final EKG", withNote(g("final_ekg"), g("final_ekg_note"), " "));
+  r += L("Etiology", withNote(g("etiology"), g("etiology_note")));
+  if (r) parts.push(r.trim());
+
+  const examLines = [];
+  if (g("mortis")) examLines.push(g("mortis"));
+  const sys = [
+    ["HEENT", "heent_wnl", "heent_note"],
+    ["Heart", "heart_wnl", "heart_note"],
+    ["Lungs", "lungs_wnl", "lungs_note"],
+    ["Abdomen", "abd_wnl", "abd_note"],
+    ["Ext", "ext_wnl", "ext_note"],
+    ["N/S", "ns_wnl", "ns_note"],
+  ];
+  sys.forEach(([label, wk, nk]) => {
+    const val = withNote(g(wk), g(nk));
+    if (val) examLines.push(label + ": " + val);
+  });
+  if (g("pupil")) examLines.push("Pupil: " + g("pupil"));
+  if (examLines.length) parts.push("Physical exam:\n" + examLines.join("\n"));
+
+  let t = "";
+  t += L("CPR total", g("cpr_min") ? g("cpr_min") + " min" : "");
+  t += L("Defibrillation", g("defib"));
+  t += L("Airway", g("airway"));
+  t += L("Ventilation", g("vent"));
+  if (t) parts.push(t.trim());
+  if (g("meds")) parts.push("Medications/procedures:\n- " + (Array.isArray(s.meds) ? s.meds.join("\n- ") : s.meds));
+  if (g("med_detail")) parts.push("Drug doses / timeline:\n" + g("med_detail"));
+  if (g("abg")) parts.push("ABG/VBG:\n" + g("abg"));
+  if (g("investigation")) parts.push("Investigations:\n" + g("investigation"));
+  if (g("post_rosc")) parts.push("Post-ROSC:\n" + g("post_rosc"));
+  if (g("diagnosis")) parts.push("Final diagnosis: " + g("diagnosis"));
+  if (g("impression")) parts.push("Impression: " + g("impression"));
+  if (g("outcome") || g("outcome_note")) parts.push("Outcome: " + withNote(g("outcome"), g("outcome_note")));
+  return parts.join("\n\n");
+}
+
+// Open the CPR screen for the current patient
+document.getElementById("open-cpr").addEventListener("click", () => {
+  const e = currentEncounterId ? encounters[currentEncounterId] : null;
+  if (e && e.cprState) {
+    try {
+      populateCpr(JSON.parse(e.cprState));
+    } catch {
+      cprForm.reset();
+    }
+  } else {
+    cprForm.reset();
+  }
+  // Prefill bed from the current bedside entry / patient.
+  document.getElementById("cpr-bed").value = (e && e.bed) || fBed.value.trim() || "";
+  document.getElementById("cpr-me").textContent = clinician;
+  setStatus(cprStatus, "");
+  hideAll();
+  cprScreen.classList.remove("hidden");
+});
+
+document.getElementById("cpr-back").addEventListener("click", () => {
+  role = "bedside";
+  showRole();
+});
+document.getElementById("cpr-clear").addEventListener("click", () => {
+  cprForm.reset();
+  setStatus(cprStatus, "");
+});
+
+document.getElementById("cpr-save").addEventListener("click", async () => {
+  const bed = document.getElementById("cpr-bed").value.trim();
+  if (!bed) {
+    setStatus(cprStatus, "Bed / identifier is required.", "error");
+    return;
+  }
+  if (!uid) return;
+  const state = gatherCprState();
+  const payload = {
+    cpr: composeCprNote(state),
+    cprState: JSON.stringify(state),
+    updatedAt: serverTimestamp(),
+  };
+  document.getElementById("cpr-save").disabled = true;
+  setStatus(cprStatus, "Saving…");
+  try {
+    if (currentEncounterId && encounters[currentEncounterId]) {
+      payload.bed = bed;
+      await update(ref(db, "encounters/" + currentEncounterId), payload);
+    } else {
+      const p = {
+        bed,
+        by: clinician,
+        byUid: uid,
+        status: "active",
+        complaint: "Cardiac arrest / CPR",
+        createdAt: serverTimestamp(),
+        ...payload,
+      };
+      const newRef = await push(ref(db, "encounters"), p);
+      currentEncounterId = newRef.key;
+    }
+    setStatus(cprStatus, "✓ CPR record saved to station", "ok");
+  } catch (err) {
+    console.error(err);
+    setStatus(cprStatus, "Failed: " + (err.code || err.message), "error");
+  } finally {
+    document.getElementById("cpr-save").disabled = false;
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Auth state → drive which screen shows
 // ---------------------------------------------------------------------------
@@ -358,6 +524,7 @@ function hideAll() {
   roleScreen.classList.add("hidden");
   bedsideScreen.classList.add("hidden");
   stationScreen.classList.add("hidden");
+  cprScreen.classList.add("hidden");
 }
 
 function showRoleScreen() {
@@ -1358,6 +1525,7 @@ function formatNote(e) {
   if (e.antibiotic) parts.push("\nANTIBIOTIC:\n" + e.antibiotic);
   if (e.consult) parts.push("\nCONSULTATION: " + e.consult);
   if (e.disposition) parts.push("\nDISPOSITION: " + e.disposition);
+  if (e.cpr) parts.push("\n" + e.cpr);
 
   parts.push("\n— Entered by " + (e.by || "unknown") + " · " + fullTime(e.updatedAt));
   return parts.join("\n");

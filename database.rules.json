@@ -41,6 +41,8 @@
         "status":    { ".validate": "newData.isString() && (newData.val() === 'active' || newData.val() === 'recorded')" },
         "createdAt": { ".validate": "newData.val() <= now" },
         "updatedAt": { ".validate": "newData.val() <= now" },
+        "cpr":       { ".validate": "newData.isString() && newData.val().length <= 20000" },
+        "cprState":  { ".validate": "newData.isString() && newData.val().length <= 20000" },
         "$other":    { ".validate": "newData.isString() && newData.val().length <= 8000" }
       }
     },

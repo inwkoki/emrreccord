@@ -70,6 +70,7 @@
       <header class="topbar">
         <div><span class="dot" id="dot-bedside"></span> 📱 Bedside — <span id="me-bedside"></span></div>
         <div class="topbar-right">
+          <button class="ghost-btn" id="open-cpr">🫀 CPR</button>
           <button class="ghost-btn" data-switch="station">🖥️ Station</button>
           <button class="ghost-btn" data-settings title="Account">⚙️</button>
           <button class="ghost-btn" data-signout>Sign out</button>
@@ -367,6 +368,194 @@
           </div>
         </section>
       </div>
+    </section>
+
+    <!-- ================= CPR RECORD ================= -->
+    <section id="cpr-screen" class="screen hidden">
+      <header class="topbar">
+        <div><span class="dot" id="dot-cpr"></span> 🫀 CPR record — <span id="cpr-me"></span></div>
+        <div class="topbar-right">
+          <button class="ghost-btn" id="cpr-back">← Bedside</button>
+          <button class="ghost-btn" data-settings title="Account">⚙️</button>
+          <button class="ghost-btn" data-signout>Sign out</button>
+        </div>
+      </header>
+
+      <main class="bedside-body">
+        <form id="cpr-form" autocomplete="off">
+          <label class="lbl">Bed / identifier <span class="req">*</span></label>
+          <input name="bed" id="cpr-bed" type="text" maxlength="40" placeholder="e.g. Resus 1 / Bed 3" />
+
+          <h3 class="cpr-h">Arrest details</h3>
+          <label class="lbl">Mode of arrival</label>
+          <div class="radio-row">
+            <label><input type="radio" name="arrival" value="EMS" /> EMS</label>
+            <label><input type="radio" name="arrival" value="Refer" /> Refer</label>
+            <label><input type="radio" name="arrival" value="Walk-in" /> Walk-in</label>
+            <label><input type="radio" name="arrival" value="Other" /> Other</label>
+          </div>
+          <input name="arrival_other" type="text" class="cpr-inline" placeholder="arrival note" />
+
+          <label class="lbl">Place of arrest</label>
+          <div class="radio-row">
+            <label><input type="radio" name="place" value="Home" /> Home</label>
+            <label><input type="radio" name="place" value="Hospital" /> Hospital</label>
+            <label><input type="radio" name="place" value="Street" /> Street</label>
+            <label><input type="radio" name="place" value="Public" /> Public</label>
+            <label><input type="radio" name="place" value="Other" /> Other</label>
+          </div>
+
+          <div class="cpr-grid2">
+            <div><label class="lbl">Est. time of arrest</label><input name="arrest_time" type="text" placeholder="18:00" /></div>
+            <div><label class="lbl">Who initiated CPR</label><input name="initiator" type="text" placeholder="e.g. Triage" /></div>
+          </div>
+
+          <div class="radio-groups">
+            <div><span class="rg-label">Witnessed</span>
+              <label><input type="radio" name="witnessed" value="Yes" /> Yes</label>
+              <label><input type="radio" name="witnessed" value="No" /> No</label>
+            </div>
+            <div><span class="rg-label">Bystander CPR</span>
+              <label><input type="radio" name="bystander" value="Yes" /> Yes</label>
+              <label><input type="radio" name="bystander" value="No" /> No</label>
+            </div>
+            <div><span class="rg-label">AED used</span>
+              <label><input type="radio" name="aed" value="Yes" /> Yes</label>
+              <label><input type="radio" name="aed" value="No" /> No</label>
+            </div>
+          </div>
+
+          <label class="lbl">Pre-hospital treatment</label>
+          <textarea name="prehosp" rows="2" placeholder="การรักษานอกโรงพยาบาล / none"></textarea>
+
+          <label class="lbl">History / timeline</label>
+          <textarea name="history" rows="4" placeholder="onset, events, times…"></textarea>
+
+          <label class="lbl">Underlying disease</label>
+          <div class="check-row">
+            <label><input type="checkbox" name="ud" value="none" /> none</label>
+            <label><input type="checkbox" name="ud" value="DM" /> DM</label>
+            <label><input type="checkbox" name="ud" value="HTN" /> HTN</label>
+            <label><input type="checkbox" name="ud" value="DLD" /> DLD</label>
+            <label><input type="checkbox" name="ud" value="Old CVA" /> Old CVA</label>
+            <label><input type="checkbox" name="ud" value="suspected CAD" /> susp. CAD</label>
+            <label><input type="checkbox" name="ud" value="COPD/asthma" /> COPD/asthma</label>
+          </div>
+          <input name="ud_other" type="text" class="cpr-inline" placeholder="other underlying" />
+
+          <h3 class="cpr-h">Rhythm &amp; etiology</h3>
+          <label class="lbl">First rhythm</label>
+          <div class="radio-row">
+            <label><input type="radio" name="first_rhythm" value="VF" /> VF</label>
+            <label><input type="radio" name="first_rhythm" value="VT" /> VT</label>
+            <label><input type="radio" name="first_rhythm" value="Asystole" /> Asystole</label>
+            <label><input type="radio" name="first_rhythm" value="PEA" /> PEA</label>
+          </div>
+          <input name="first_rhythm_note" type="text" class="cpr-inline" placeholder="e.g. PEA x 4 cycles" />
+
+          <label class="lbl">Final EKG</label>
+          <div class="radio-row">
+            <label><input type="radio" name="final_ekg" value="Asystole" /> Asystole</label>
+            <label><input type="radio" name="final_ekg" value="PEA" /> PEA</label>
+            <label><input type="radio" name="final_ekg" value="VT" /> VT</label>
+            <label><input type="radio" name="final_ekg" value="VF" /> VF</label>
+            <label><input type="radio" name="final_ekg" value="Sinus tachycardia" /> Sinus tachy</label>
+            <label><input type="radio" name="final_ekg" value="Sinus bradycardia" /> Sinus brady</label>
+            <label><input type="radio" name="final_ekg" value="STEMI" /> STEMI</label>
+            <label><input type="radio" name="final_ekg" value="NSTEMI" /> NSTEMI</label>
+            <label><input type="radio" name="final_ekg" value="Other" /> Other</label>
+          </div>
+          <input name="final_ekg_note" type="text" class="cpr-inline" placeholder="e.g. with TWI V1-V6" />
+
+          <label class="lbl">Presumed etiology</label>
+          <div class="radio-row">
+            <label><input type="radio" name="etiology" value="Non-trauma" /> Non-trauma</label>
+            <label><input type="radio" name="etiology" value="Trauma" /> Trauma</label>
+          </div>
+          <input name="etiology_note" type="text" class="cpr-inline" placeholder="e.g. hypoxemia, anaphylaxis" />
+
+          <h3 class="cpr-h">Physical exam</h3>
+          <div class="check-row">
+            <label><input type="checkbox" name="mortis" value="Rigor mortis" /> Rigor mortis</label>
+            <label><input type="checkbox" name="mortis" value="Livor mortis" /> Livor mortis</label>
+          </div>
+          <div class="cpr-exam">
+            <div class="cpr-exam-row"><span>HEENT</span><label><input type="checkbox" name="heent_wnl" value="WNL" /> WNL</label><input name="heent_note" type="text" placeholder="abnormal…" /></div>
+            <div class="cpr-exam-row"><span>Heart</span><label><input type="checkbox" name="heart_wnl" value="Absent heart sound" /> Absent HS</label><input name="heart_note" type="text" placeholder="other…" /></div>
+            <div class="cpr-exam-row"><span>Lungs</span><label><input type="checkbox" name="lungs_wnl" value="WNL" /> WNL</label><input name="lungs_note" type="text" placeholder="abnormal…" /></div>
+            <div class="cpr-exam-row"><span>Abdomen</span><label><input type="checkbox" name="abd_wnl" value="WNL" /> WNL</label><input name="abd_note" type="text" placeholder="abnormal…" /></div>
+            <div class="cpr-exam-row"><span>Ext</span><label><input type="checkbox" name="ext_wnl" value="WNL" /> WNL</label><input name="ext_note" type="text" placeholder="e.g. MP rash…" /></div>
+            <div class="cpr-exam-row"><span>N/S</span><label><input type="checkbox" name="ns_wnl" value="Unresponsive" /> Unresponsive</label><input name="ns_note" type="text" placeholder="other…" /></div>
+          </div>
+          <label class="lbl">Pupil</label>
+          <input name="pupil" type="text" placeholder="e.g. 3 mm RTLBE" />
+
+          <h3 class="cpr-h">Treatment</h3>
+          <div class="cpr-grid2">
+            <div><label class="lbl">CPR total (min)</label><input name="cpr_min" type="text" inputmode="numeric" placeholder="13" /></div>
+            <div><label class="lbl">Defibrillation</label><input name="defib" type="text" placeholder="none / x2 @ 200J" /></div>
+          </div>
+          <label class="lbl">Airway</label>
+          <input name="airway" type="text" placeholder="e.g. ETT No 7, depth 23 cm" />
+          <div class="radio-row">
+            <span class="rg-label">Ventilation</span>
+            <label><input type="radio" name="vent" value="Mechanical ventilation" /> Mechanical</label>
+            <label><input type="radio" name="vent" value="Bag-valve ventilation" /> Bag-valve</label>
+          </div>
+
+          <label class="lbl">Medications / procedures given</label>
+          <div class="check-col">
+            <label><input type="checkbox" name="meds" value="Adrenaline (1:1000) IM anterolateral thigh" /> Adrenaline 1:1000 IM (thigh)</label>
+            <label><input type="checkbox" name="meds" value="Adrenaline (1:10000) 1 mg IV q3-5 min" /> Adrenaline 1:10000 IV</label>
+            <label><input type="checkbox" name="meds" value="Amiodarone 300 mg IV push" /> Amiodarone 300 mg IV</label>
+            <label><input type="checkbox" name="meds" value="Amiodarone 150 mg IV push" /> Amiodarone 150 mg IV</label>
+            <label><input type="checkbox" name="meds" value="7.5% NaHCO3 50 ml IV push" /> NaHCO3</label>
+            <label><input type="checkbox" name="meds" value="10% calcium gluconate IV" /> Ca gluconate</label>
+            <label><input type="checkbox" name="meds" value="10% magnesium sulfate 2 g IV" /> Mg sulfate</label>
+            <label><input type="checkbox" name="meds" value="Naloxone" /> Naloxone</label>
+            <label><input type="checkbox" name="meds" value="Lidocaine IV" /> Lidocaine</label>
+            <label><input type="checkbox" name="meds" value="0.9% NSS 1000 ml IV" /> NSS 1000 ml</label>
+            <label><input type="checkbox" name="meds" value="RLS 1000 ml IV" /> RLS 1000 ml</label>
+            <label><input type="checkbox" name="meds" value="Ultrasound resuscitation" /> US resuscitation</label>
+            <label><input type="checkbox" name="meds" value="ICD (intercostal drain)" /> ICD</label>
+            <label><input type="checkbox" name="meds" value="Pericardiocentesis" /> Pericardiocentesis</label>
+          </div>
+          <label class="lbl">Drug doses / timeline (details)</label>
+          <textarea name="med_detail" rows="4" placeholder="e.g. Adrenaline 1:10000 1 mg IV q4min x1; RLS free flow 300 ml then off…"></textarea>
+
+          <label class="lbl">ABG / VBG</label>
+          <textarea name="abg" rows="3" placeholder="time — pH / PO2 / PCO2 / Na / K / lactate…"></textarea>
+
+          <label class="lbl">Investigations</label>
+          <textarea name="investigation" rows="3" placeholder="CXR, CBC, chemistry…"></textarea>
+
+          <label class="lbl">Post-ROSC orders / timeline</label>
+          <textarea name="post_rosc" rows="3" placeholder="vitals, drips (Adrenaline/Levophed), meds over time…"></textarea>
+
+          <h3 class="cpr-h">Diagnosis &amp; outcome</h3>
+          <label class="lbl">Final diagnosis</label>
+          <input name="diagnosis" type="text" placeholder="e.g. Post cardiac arrest, suspected anaphylaxis" />
+          <label class="lbl">Impression</label>
+          <input name="impression" type="text" placeholder="e.g. cardiac arrest due to anaphylaxis, DDx CHF" />
+
+          <label class="lbl">Outcome</label>
+          <div class="radio-row">
+            <label><input type="radio" name="outcome" value="Dead" /> Dead</label>
+            <label><input type="radio" name="outcome" value="ROSC" /> ROSC</label>
+            <label><input type="radio" name="outcome" value="Sustained ROSC > 20 min" /> Sustained ROSC &gt;20 min</label>
+            <label><input type="radio" name="outcome" value="Family declined treatment" /> Family declined</label>
+            <label><input type="radio" name="outcome" value="Admit to ward" /> Admit</label>
+            <label><input type="radio" name="outcome" value="Transfer" /> Transfer</label>
+          </div>
+          <input name="outcome_note" type="text" class="cpr-inline" placeholder="destination / note (e.g. Transfer to KKH)" />
+        </form>
+
+        <div class="bedside-actions">
+          <button id="cpr-save" class="primary">⬆️ Save CPR to station</button>
+          <button id="cpr-clear" type="button" class="ghost-btn">Clear</button>
+        </div>
+        <p id="cpr-status" class="status"></p>
+      </main>
     </section>
 
     <!-- ================= ACCOUNT SETTINGS ================= -->

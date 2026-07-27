@@ -547,6 +547,107 @@ button:disabled {
   margin: 8px 0 0;
 }
 
+/* CPR record form */
+.cpr-h {
+  margin: 18px 0 2px;
+  font-size: 15px;
+  color: var(--primary-dark);
+  border-bottom: 2px solid var(--line);
+  padding-bottom: 4px;
+}
+
+.radio-row,
+.check-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 4px 0;
+  align-items: center;
+}
+
+.radio-row label,
+.check-row label,
+.check-col label {
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.radio-row input,
+.check-row input,
+.check-col input {
+  width: auto;
+}
+
+.check-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  margin: 4px 0;
+}
+
+.cpr-inline {
+  margin-top: 4px;
+}
+
+.cpr-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.radio-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 8px 0;
+}
+
+.rg-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+.cpr-exam-row {
+  display: grid;
+  grid-template-columns: 68px auto 1fr;
+  gap: 8px;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.cpr-exam-row > span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.cpr-exam-row label {
+  font-size: 13px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cpr-exam-row label input {
+  width: auto;
+}
+
+.cpr-exam-row input[type="text"] {
+  padding: 7px 9px;
+  font-size: 14px;
+}
+
+@media (max-width: 420px) {
+  .check-col {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Account settings modal */
 .modal {
   position: fixed;
