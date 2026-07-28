@@ -727,7 +727,17 @@ EXAM_SYSTEMS.forEach(([sys, opts], i) => {
   const dl = document.createElement("datalist");
   dl.id = "eb-dl-" + i;
   input.addEventListener("input", updateExamPreview);
-  row.append(label, input, dl);
+  const clr = document.createElement("button");
+  clr.type = "button";
+  clr.className = "eb-clear";
+  clr.textContent = "✕";
+  clr.title = "clear this field";
+  clr.addEventListener("click", () => {
+    input.value = "";
+    updateExamPreview();
+    input.focus();
+  });
+  row.append(label, input, dl, clr);
   examBuilderRows.appendChild(row);
   renderExamDatalist(i);
   const o = document.createElement("option"); // system in the edit-list selector

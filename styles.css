@@ -167,7 +167,7 @@ body {
 
 .eb-row {
   display: grid;
-  grid-template-columns: 92px 1fr;
+  grid-template-columns: 92px 1fr auto;
   align-items: center;
   gap: 10px;
   margin-bottom: 8px;
@@ -698,6 +698,27 @@ button:disabled {
   font-weight: 600;
   color: var(--muted);
   margin-right: 4px;
+}
+
+.eb-row datalist {
+  display: none;
+}
+
+.eb-clear {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 8px 9px;
+  border-radius: 8px;
+}
+
+.eb-clear:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: #fef2f2;
 }
 
 .cpr-exam-row {
