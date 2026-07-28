@@ -30,6 +30,7 @@ import {
 import { firebaseConfig } from "./firebase-config.js";
 import {
   HA_P307, HA_P306, PRESSORS, HIGH_ALERT, CODES_ADULT, CODES_PEDS, RSI_DRUGS, TBI_GROUPS, PEDS_VITALS, PEDS_DRUGS, ELYTE_CORRECTION, PECARN,
+  ARREST_ADULT_FLOW, ARREST_PEDS_FLOW,
 } from "./reference-data.js";
 
 // Register the service worker for offline support (best-effort).
@@ -2398,8 +2399,64 @@ function renderPedsByAge() {
 // ---------------------------------------------------------------------------
 
 
-function renderCodesA() { renderInto("codesA-cards", CODES_ADULT); }
-function renderCodesP() { renderInto("codesP-cards", CODES_PEDS); }
+// Build an HTML/CSS flowchart from a node list (offline-safe, no libraries).
+// Node types: start · action · decision(branch) · shock · drug · loop · end.
+function buildFlow(nodes) {
+  const flow = document.createElement("div");
+  flow.className = "flow";
+  nodes.forEach((n, i) => {
+    if (i > 0) {
+      const arrow = document.createElement("div");
+      arrow.className = "flow-arrow";
+      arrow.textContent = "▼";
+      flow.appendChild(arrow);
+    }
+    if (n.type === "branch") {
+      const q = document.createElement("div");
+      q.className = "flow-node flow-decision";
+      q.textContent = n.question;
+      flow.appendChild(q);
+      const a2 = document.createElement("div");
+      a2.className = "flow-arrow";
+      a2.textContent = "▼";
+      flow.appendChild(a2);
+      const branches = document.createElement("div");
+      branches.className = "flow-branches";
+      n.branches.forEach((b) => {
+        const col = document.createElement("div");
+        col.className = "flow-branch";
+        const lab = document.createElement("div");
+        lab.className = "flow-branch-label";
+        lab.textContent = b.label;
+        col.appendChild(lab);
+        col.appendChild(buildFlow(b.nodes));
+        branches.appendChild(col);
+      });
+      flow.appendChild(branches);
+    } else {
+      const box = document.createElement("div");
+      box.className = "flow-node flow-" + n.type;
+      box.textContent = n.text;
+      flow.appendChild(box);
+    }
+  });
+  return flow;
+}
+
+function renderFlowInto(boxId, nodes) {
+  const box = $(boxId);
+  if (!box || box.childElementCount) return;
+  box.appendChild(buildFlow(nodes));
+}
+
+function renderCodesA() {
+  renderFlowInto("codesA-flow", ARREST_ADULT_FLOW);
+  renderInto("codesA-cards", CODES_ADULT);
+}
+function renderCodesP() {
+  renderFlowInto("codesP-flow", ARREST_PEDS_FLOW);
+  renderInto("codesP-cards", CODES_PEDS);
+}
 
 // ---------------------------------------------------------------------------
 // COMMON PAEDIATRIC DRUG DOSES

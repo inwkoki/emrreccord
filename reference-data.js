@@ -518,3 +518,45 @@ export const PECARN = [
     items: ["No high- or intermediate-risk features"],
     dispo: "CT not indicated — observe" },
 ];
+
+// Cardiac-arrest algorithm flowcharts (node lists). Node types: start · action ·
+// decision (branch) · shock · drug · loop · end. Rendered by buildFlow() in app.js.
+export const ARREST_ADULT_FLOW = [
+  { type: "start", text: "Start CPR · give O2 · attach monitor / defibrillator" },
+  { type: "branch", question: "Rhythm shockable?", branches: [
+    { label: "VF / pVT", nodes: [
+      { type: "shock", text: "⚡ Shock (biphasic 120-200 J)" },
+      { type: "action", text: "CPR 2 min · IV/IO access" },
+      { type: "drug", text: "💉 Epinephrine 1 mg q3-5 min" },
+      { type: "drug", text: "💉 Amiodarone 300 → 150 mg (or Lidocaine) if refractory" },
+      { type: "loop", text: "↻ Every 2 min: rhythm check → shock if shockable → CPR. Treat H's & T's" },
+    ] },
+    { label: "Asystole / PEA", nodes: [
+      { type: "drug", text: "💉 Epinephrine 1 mg ASAP, then q3-5 min" },
+      { type: "action", text: "CPR 2 min · IV/IO · advanced airway + capnography" },
+      { type: "action", text: "Treat reversible causes (H's & T's)" },
+      { type: "loop", text: "↻ Every 2 min: rhythm check → epinephrine q3-5 min" },
+    ] },
+  ] },
+  { type: "end", text: "ROSC → post-cardiac-arrest care · else continue / consider termination" },
+];
+
+export const ARREST_PEDS_FLOW = [
+  { type: "start", text: "Start CPR (15:2, 2 rescuers) · O2 · monitor / defib" },
+  { type: "branch", question: "Rhythm shockable?", branches: [
+    { label: "VF / pVT", nodes: [
+      { type: "shock", text: "⚡ Shock 2 J/kg → 4 J/kg → ≥4 J/kg (max 10 J/kg / adult)" },
+      { type: "action", text: "CPR 2 min · IV/IO access" },
+      { type: "drug", text: "💉 Epinephrine 0.01 mg/kg (max 1 mg) q3-5 min" },
+      { type: "drug", text: "💉 Amiodarone 5 mg/kg (max 300, ≤3 doses) or Lidocaine 1 mg/kg" },
+      { type: "loop", text: "↻ Every 2 min: rhythm check → shock if shockable → CPR. Treat H's & T's" },
+    ] },
+    { label: "Asystole / PEA", nodes: [
+      { type: "drug", text: "💉 Epinephrine 0.01 mg/kg (max 1 mg) ASAP, q3-5 min" },
+      { type: "action", text: "CPR 2 min · IV/IO · advanced airway + capnography" },
+      { type: "action", text: "Treat reversible causes (H's & T's + hypoglycaemia)" },
+      { type: "loop", text: "↻ Every 2 min: rhythm check → epinephrine q3-5 min" },
+    ] },
+  ] },
+  { type: "end", text: "ROSC → post-arrest care · otherwise continue" },
+];
