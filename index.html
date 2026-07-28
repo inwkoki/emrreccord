@@ -709,6 +709,31 @@
           <p class="disclaimer">⚠️ Quick reference only — follow the full AHA/AAP PALS algorithm and your local protocol.</p>
         </div>
 
+        <!-- ===== Paediatric weight-based resus + fluids ===== -->
+        <div id="calc-pbw" class="calc-pane hidden">
+          <p class="hint">
+            Enter the child's weight for weight-based <b>resuscitation doses</b> and
+            <b>maintenance fluids</b> (4-2-1). Estimates — use a length-based tape when available.
+          </p>
+          <div class="calc-conc-row">
+            <label class="lbl" style="margin:0">Weight</label>
+            <input id="pbw-weight" type="text" inputmode="decimal" maxlength="6" placeholder="kg" autocomplete="off" />
+            <span class="med-in">kg</span>
+          </div>
+          <div id="pbw-out"></div>
+          <p class="disclaimer">⚠️ Reference only — confirm every dose against protocol and the individual child before use.</p>
+        </div>
+
+        <!-- ===== Electrolyte / glucose correction ===== -->
+        <div id="calc-elyte" class="calc-pane hidden">
+          <p class="hint">
+            Electrolyte &amp; glucose correction dosing (paediatric weight-based + adult).
+            Infusion rate / concentration limits: see <b>High-alert drugs</b>.
+          </p>
+          <div id="elyte-cards"></div>
+          <p class="disclaimer">⚠️ Reference only — confirm doses, rates and monitoring against protocol.</p>
+        </div>
+
         <!-- ===== RSI drugs ===== -->
         <div id="calc-rsi" class="calc-pane hidden">
           <p class="hint">

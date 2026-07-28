@@ -29,7 +29,7 @@ import {
 
 import { firebaseConfig } from "./firebase-config.js";
 import {
-  HA_P307, HA_P306, PRESSORS, HIGH_ALERT, CODES_ADULT, CODES_PEDS, RSI_DRUGS, TBI_GROUPS, PEDS_VITALS, PEDS_DRUGS,
+  HA_P307, HA_P306, PRESSORS, HIGH_ALERT, CODES_ADULT, CODES_PEDS, RSI_DRUGS, TBI_GROUPS, PEDS_VITALS, PEDS_DRUGS, ELYTE_CORRECTION,
 } from "./reference-data.js";
 
 // Register the service worker for offline support (best-effort).
@@ -2409,6 +2409,68 @@ function renderPedsDrugs() {
   });
 }
 
+function renderElyte() { renderInto("elyte-cards", ELYTE_CORRECTION); }
+
+// ---------------------------------------------------------------------------
+// Paediatric weight-based resuscitation doses + maintenance fluids.
+// One weight in → the critical code doses and fluids out. Estimates only.
+// ---------------------------------------------------------------------------
+function pbwClamp(v, lo, hi) { return Math.min(Math.max(v, lo), hi); }
+function pbwNum(v) {
+  if (!isFinite(v)) return "—";
+  const dp = v < 1 ? 3 : v < 10 ? 2 : v < 100 ? 1 : 0;
+  return parseFloat(v.toFixed(dp)).toString();
+}
+function pbwMaintHr(w) {
+  return w <= 10 ? 4 * w : w <= 20 ? 40 + 2 * (w - 10) : 60 + (w - 20); // 4-2-1 rule
+}
+function pbwMaintDay(w) {
+  return w <= 10 ? 100 * w : w <= 20 ? 1000 + 50 * (w - 10) : 1500 + 20 * (w - 20); // 100-50-20
+}
+function recomputePBW() {
+  const out = $("pbw-out");
+  if (!out) return;
+  const w = parseFloat($("pbw-weight").value);
+  out.innerHTML = "";
+  if (!(w > 0)) return;
+  const im = pbwClamp(0.01 * w, 0, 0.5);
+  const groups = [
+    ["Resuscitation", [
+      ["Adrenaline (arrest)", pbwNum(0.01 * w) + " mg IV/IO = " + pbwNum(0.1 * w) + " mL of 1:10,000 · q3-5 min"],
+      ["Adrenaline (anaphylaxis IM)", pbwNum(im) + " mg = " + pbwNum(im) + " mL of 1:1000 (max 0.3 child / 0.5 adol)"],
+      ["Atropine", pbwNum(pbwClamp(0.02 * w, 0.1, 0.5)) + " mg (0.02 mg/kg; min 0.1, max 0.5)"],
+      ["Amiodarone (arrest)", pbwNum(Math.min(5 * w, 300)) + " mg (5 mg/kg, max 300)"],
+      ["Adenosine (SVT)", pbwNum(Math.min(0.1 * w, 6)) + " mg then " + pbwNum(Math.min(0.2 * w, 12)) + " mg (max 6 / 12)"],
+      ["Defibrillation", pbwNum(2 * w) + " J (2 J/kg) → " + pbwNum(4 * w) + " J (4 J/kg)"],
+      ["Sync cardioversion", pbwNum(0.5 * w) + "-" + pbwNum(1 * w) + " J → " + pbwNum(2 * w) + " J"],
+    ]],
+    ["Fluids & glucose", [
+      ["Fluid bolus", pbwNum(20 * w) + " mL (20 mL/kg; 10 mL/kg if neonate/trauma/DKA/cardiac)"],
+      ["Dextrose", pbwNum(5 * w) + " mL D10W (0.5 g/kg) or " + pbwNum(2 * w) + " mL D25W"],
+      ["Maintenance (4-2-1)", pbwNum(pbwMaintHr(w)) + " mL/hr ≈ " + pbwNum(pbwMaintDay(w)) + " mL/day"],
+    ]],
+  ];
+  groups.forEach(([label, rows]) => {
+    const lb = document.createElement("p");
+    lb.className = "ha-need";
+    lb.textContent = label;
+    out.appendChild(lb);
+    rows.forEach(([k, v]) => {
+      const row = document.createElement("div");
+      row.className = "ha-row";
+      const kk = document.createElement("span");
+      kk.className = "k";
+      kk.textContent = k;
+      const vv = document.createElement("span");
+      vv.className = "v";
+      vv.textContent = v;
+      row.append(kk, vv);
+      out.appendChild(row);
+    });
+  });
+}
+$("pbw-weight").addEventListener("input", recomputePBW);
+
 // ---------------------------------------------------------------------------
 // Reference navigation: a section menu (table of contents) + section views.
 // Adding a new reference = add a pane in index.html + one entry here.
@@ -2418,8 +2480,10 @@ const SECTIONS = [
   { key: "highalert", em: "⚠️", title: "High-alert drugs", desc: "KKU injectable guidelines", lazy: renderHighAlert },
   { key: "codesA", em: "🫀", title: "Adult codes", desc: "ACLS: arrest · brady · tachy · cardioversion", lazy: renderCodesA },
   { key: "codesP", em: "👶", title: "Peds codes", desc: "PALS: arrest · brady · tachy", lazy: renderCodesP },
+  { key: "pbw", em: "⚖️", title: "Peds by weight", desc: "Resus doses & fluids from weight", lazy: recomputePBW },
   { key: "rsi", em: "💊", title: "RSI drugs", desc: "Induction & paralytics, doses", lazy: renderRSI },
   { key: "pdrugs", em: "🍼", title: "Peds drug doses", desc: "Common paediatric drugs (weight-based)", lazy: renderPedsDrugs },
+  { key: "elyte", em: "🧂", title: "Electrolyte correction", desc: "K / Ca / Mg / Na / glucose dosing", lazy: renderElyte },
   { key: "tbi", em: "🧠", title: "Mild TBI", desc: "Thai CPG risk stratification", lazy: renderTBI },
   { key: "peds", em: "📏", title: "Peds vital signs", desc: "PALS normal ranges by age", lazy: renderPeds },
 ];
@@ -2461,7 +2525,9 @@ function buildSearchIndex() {
   RSI_DRUGS.forEach((d) => add(d.name, d.tag + " " + rowsText(d.rows), "rsi", "RSI drug"));
   PEDS_DRUGS.forEach((c) => c.drugs.forEach((dr) => add(dr.n, c.cat + " " + dr.d, "pdrugs", "Peds drug — " + c.cat)));
   TBI_GROUPS.forEach((g) => add(g.name, g.need + " " + (g.items || []).join(" "), "tbi", "Mild TBI"));
+  ELYTE_CORRECTION.forEach((d) => add(d.name, d.tag + " " + rowsText(d.rows) + " " + secText(d.sections), "elyte", "Electrolyte correction"));
   add("Paediatric vital signs", PEDS_VITALS.rows.map((r) => r.join(" ")).join(" "), "peds", "Peds vital signs");
+  add("Peds resus by weight", "adrenaline atropine amiodarone adenosine defibrillation cardioversion fluid bolus dextrose maintenance 4-2-1", "pbw", "Peds by weight");
   return idx;
 }
 

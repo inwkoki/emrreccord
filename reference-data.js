@@ -424,3 +424,38 @@ export const PEDS_DRUGS = [
     { n: "Clindamycin", d: "10-40 mg/kg/day PO/IV ÷ q6-8h", p: "cap 150/300 mg · IV 600 mg/vial" },
   ] },
 ];
+
+export const ELYTE_CORRECTION = [
+  { name: "Hypoglycaemia", tag: "Glucose", rows: [
+    ["Peds", "Dextrose 0.5 g/kg IV → D10W 5 mL/kg (or D25W 2 mL/kg)"],
+    ["Neonate", "D10W 2 mL/kg"],
+    ["Adult", "25-50 mL D50W (12.5-25 g) IV"],
+    ["Then", "recheck glucose; start maintenance dextrose"],
+  ] },
+  { name: "Hypokalaemia", tag: "K+", rows: [
+    ["Peds", "KCl 0.5-1 mEq/kg IV over 1-2 h (max 1 mEq/kg per dose)"],
+    ["Rate/limit", "peripheral conc <=80 mEq/L & <10 mEq/h; >=10 mEq/h needs ECG monitoring", true],
+    ["Never", "IV push — infusion pump only (see High-alert)", true],
+  ] },
+  { name: "Hypocalcaemia", tag: "Ca2+", rows: [
+    ["Peds", "Calcium gluconate 10% 0.5-1 mL/kg IV slow (50-100 mg/kg), max 2 g"],
+    ["Adult", "1-2 g calcium gluconate IV over 10 min"],
+    ["Rate", "<=200 mg/min; ECG monitor; stop if bradycardia; no push", true],
+    ["Incompat.", "do not mix with bicarbonate / phosphate (see High-alert)"],
+  ] },
+  { name: "Hypomagnesaemia", tag: "Mg2+", rows: [
+    ["Peds", "MgSO4 25-50 mg/kg IV over 15-30 min (max 2 g)"],
+    ["Adult", "MgSO4 1-2 g IV over 15-60 min"],
+    ["Rate", "IV drip <150 mg/min; 50% MgSO4 must not be IV push", true],
+  ] },
+  { name: "Symptomatic hyponatraemia", tag: "Na+", cls: "amber", rows: [
+    ["Peds", "3% NaCl 3-5 mL/kg IV over 10-20 min (seizing); repeat to stop seizure"],
+    ["Adult", "3% NaCl 100 mL IV over 10 min, may repeat x2"],
+    ["Caution", "raise Na slowly (<8-10 mEq/L / 24 h) — osmotic demyelination risk", true],
+  ] },
+  { name: "Hyperkalaemia", tag: "K+ high", cls: "red", sections: [
+    { label: "1. Stabilise myocardium", lines: ["Calcium gluconate 10% 0.5-1 mL/kg (~60 mg/kg) IV slow — ECG monitor"] },
+    { label: "2. Shift K into cells", lines: ["Salbutamol nebuliser", "Insulin 0.1 U/kg + dextrose 0.5 g/kg IV", "NaHCO3 1-2 mEq/kg IV (if acidotic)"] },
+    { label: "3. Remove K", lines: ["Furosemide", "Cation-exchange resin (Kayexalate)", "Dialysis if severe / refractory"] },
+  ] },
+];

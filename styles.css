@@ -1406,3 +1406,7 @@ table.ref-table {
 .calc-result:hover { border-color: var(--primary); }
 .cr-label { font-weight: 700; font-size: 13.5px; }
 .cr-sub { font-size: 12px; color: var(--muted); }
+
+/* ---------- Peds-by-weight calculator output ---------- */
+#pbw-out { margin-top: 4px; }
+#pbw-out .ha-row { grid-template-columns: 150px 1fr; }
