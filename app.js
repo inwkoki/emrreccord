@@ -2519,6 +2519,48 @@ function recomputePBW() {
 $("pbw-weight").addEventListener("input", recomputePBW);
 
 // ---------------------------------------------------------------------------
+// Review status — mark each reference section as you check it. Three states:
+// Needs review → Reviewed → Validated w/ ref. Editable by tapping the badge;
+// saved per-device in localStorage (survives reloads, no login needed).
+// ---------------------------------------------------------------------------
+const REVIEW_STATES = [
+  { key: "need-review", label: "⚠ Needs review", cls: "rev-need" },
+  { key: "reviewed", label: "✓ Reviewed", cls: "rev-done" },
+  { key: "validated", label: "✔ Validated w/ ref", cls: "rev-valid" },
+];
+let refReview = {};
+try { refReview = JSON.parse(localStorage.getItem("edqc_refreview") || "{}"); } catch {}
+const getRev = (key) => refReview[key] || "need-review";
+function revMeta(status) { return REVIEW_STATES.find((s) => s.key === status) || REVIEW_STATES[0]; }
+function applyRevBadge(el, key) {
+  const m = revMeta(getRev(key));
+  el.className = "rev-badge " + m.cls;
+  el.textContent = m.label;
+  el.title = "Review status — tap to change";
+}
+function updateRevBadges(key) {
+  document.querySelectorAll('.rev-badge[data-rev-key="' + key + '"]').forEach((el) => applyRevBadge(el, key));
+}
+function cycleRev(key) {
+  const order = REVIEW_STATES.map((s) => s.key);
+  refReview[key] = order[(order.indexOf(getRev(key)) + 1) % order.length];
+  try { localStorage.setItem("edqc_refreview", JSON.stringify(refReview)); } catch {}
+  updateRevBadges(key);
+}
+function makeRevBadge(key) {
+  const el = document.createElement("span");
+  el.dataset.revKey = key;
+  el.setAttribute("role", "button");
+  el.tabIndex = 0;
+  applyRevBadge(el, key);
+  el.addEventListener("click", (e) => { e.stopPropagation(); cycleRev(key); });
+  el.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); cycleRev(key); }
+  });
+  return el;
+}
+
+// ---------------------------------------------------------------------------
 // Reference navigation: a section menu (table of contents) + section views.
 // Adding a new reference = add a pane in index.html + one entry here.
 // ---------------------------------------------------------------------------
@@ -2547,6 +2589,9 @@ function showCalcSection(key) {
   $("calc-home").classList.add("hidden");
   $("calc-secbar").classList.remove("hidden");
   $("calc-sec-title").textContent = sec.em + " " + sec.title;
+  const st = $("calc-sec-status");
+  st.innerHTML = "";
+  st.appendChild(makeRevBadge(key));
   SECTIONS.forEach((s) => $("calc-" + s.key).classList.toggle("hidden", s.key !== key));
   if (sec.lazy) sec.lazy();
   document.querySelector(".bedside-body").scrollTop = 0;
@@ -2625,6 +2670,10 @@ $("calc-search").addEventListener("input", (e) => runSearch(e.target.value));
 // Build the menu tiles once, grouped (Adult / Paediatric / General & drugs).
 (function buildCalcMenu() {
   const home = $("calc-home");
+  const hint = document.createElement("p");
+  hint.className = "hint";
+  hint.textContent = "Tap a review badge to cycle ⚠ Needs review → ✓ Reviewed → ✔ Validated (saved on this device).";
+  home.appendChild(hint);
   SECTION_GROUPS.forEach((group) => {
     const secs = SECTIONS.filter((s) => s.group === group);
     if (!secs.length) return;
@@ -2647,7 +2696,7 @@ $("calc-search").addEventListener("input", (e) => runSearch(e.target.value));
       const de = document.createElement("span");
       de.className = "de";
       de.textContent = s.desc;
-      tile.append(em, ti, de);
+      tile.append(em, ti, de, makeRevBadge(s.key));
       tile.addEventListener("click", () => showCalcSection(s.key));
       grid.appendChild(tile);
     });
