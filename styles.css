@@ -1116,3 +1116,81 @@ button:disabled {
     max-height: 40vh;
   }
 }
+
+/* ---------- Drug dose calculator ---------- */
+.calc-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.calc-tabs .chip.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.calc-note {
+  font-size: 12.5px;
+  margin: 4px 0 2px;
+}
+.calc-conc-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 4px 0 2px;
+}
+.calc-conc-row input {
+  width: 78px;
+}
+.calc-conc {
+  font-weight: 600;
+  color: var(--primary);
+  white-space: nowrap;
+}
+.calc-result {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 12px 0 8px;
+}
+.calc-out {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 0;
+}
+.calc-out-lbl {
+  font-size: 13px;
+  color: var(--muted);
+}
+.calc-out-val {
+  font-size: 21px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.calc-range {
+  font-size: 12.5px;
+  margin: 8px 0 0;
+  padding: 5px 9px;
+  border-radius: 7px;
+}
+.calc-range.within {
+  color: #166534;
+  background: rgba(22, 163, 74, 0.1);
+}
+.calc-range.low {
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.12);
+}
+.calc-range.high {
+  color: #b91c1c;
+  background: rgba(220, 38, 38, 0.12);
+  font-weight: 600;
+}
+.calc-arrow {
+  font-size: 18px;
+  color: var(--muted);
+}

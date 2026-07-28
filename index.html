@@ -71,6 +71,7 @@
         <div><span class="dot" id="dot-bedside"></span> 📱 Bedside — <span id="me-bedside"></span></div>
         <div class="topbar-right">
           <button class="ghost-btn" id="open-cpr">🫀 CPR</button>
+          <button class="ghost-btn" data-open-calc title="Drug dose calculator">🧮 Drips</button>
           <button class="ghost-btn" data-switch="station">🖥️ Station</button>
           <button class="ghost-btn" data-settings title="Account">⚙️</button>
           <button class="ghost-btn" data-signout>Sign out</button>
@@ -359,6 +360,7 @@
         <div><span class="dot" id="dot-station"></span> 🖥️ Station — <span id="active-count">0</span> active</div>
         <div class="topbar-right">
           <span id="me-station" class="muted"></span>
+          <button class="ghost-btn" data-open-calc title="Drug dose calculator">🧮 Drips</button>
           <button class="ghost-btn" data-switch="bedside">📱 Bedside</button>
           <button class="ghost-btn" data-settings title="Account">⚙️</button>
           <button class="ghost-btn" data-signout>Sign out</button>
@@ -580,6 +582,90 @@
           <button id="cpr-clear" type="button" class="ghost-btn">Clear</button>
         </div>
         <p id="cpr-status" class="status"></p>
+      </main>
+    </section>
+
+    <!-- ================= DRUG DOSE CALCULATOR ================= -->
+    <section id="calc-screen" class="screen hidden">
+      <header class="topbar">
+        <div><span class="dot" id="dot-calc"></span> 🧮 Drug dose reference &amp; calc</div>
+        <div class="topbar-right">
+          <button class="ghost-btn" id="calc-back">← Back</button>
+          <button class="ghost-btn" data-settings title="Account">⚙️</button>
+          <button class="ghost-btn" data-signout>Sign out</button>
+        </div>
+      </header>
+
+      <main class="bedside-body">
+        <div class="calc-tabs" id="calc-tabs">
+          <button type="button" class="chip active" data-calc-tab="pressor">💉 Inotrope / Vasopressor</button>
+        </div>
+
+        <!-- ===== Inotrope / vasopressor drip calculator ===== -->
+        <div id="calc-pressor" class="calc-pane">
+          <p class="hint">
+            Work out the <b>actual dose delivered</b> from body weight, drip concentration and pump
+            rate — or the pump rate needed for a <b>target dose</b>. Both directions update live.
+          </p>
+
+          <label class="lbl">Drug</label>
+          <select id="calc-drug"></select>
+          <p id="calc-drug-note" class="muted calc-note"></p>
+
+          <div class="cpr-grid2">
+            <div>
+              <label class="lbl">Body weight (kg)</label>
+              <input id="calc-weight" type="text" inputmode="decimal" placeholder="e.g. 60" maxlength="6" autocomplete="off" />
+            </div>
+            <div>
+              <label class="lbl">Pump rate (mL/hr)</label>
+              <input id="calc-rate" type="text" inputmode="decimal" placeholder="e.g. 5" maxlength="7" autocomplete="off" />
+            </div>
+          </div>
+
+          <label class="lbl">Preparation / concentration</label>
+          <select id="calc-prep"></select>
+          <div class="calc-conc-row">
+            <input id="calc-amt" type="text" inputmode="decimal" maxlength="7" autocomplete="off" />
+            <span id="calc-amt-unit" class="med-in">mg</span>
+            <span class="med-in">in</span>
+            <input id="calc-vol" type="text" inputmode="decimal" maxlength="6" autocomplete="off" />
+            <span class="med-in">mL</span>
+            <span id="calc-conc" class="calc-conc"></span>
+          </div>
+
+          <!-- Forward: rate → dose -->
+          <div class="calc-result">
+            <div class="calc-out">
+              <span class="calc-out-lbl">Dose / min</span>
+              <span class="calc-out-val" id="calc-out-min">—</span>
+            </div>
+            <div class="calc-out" id="calc-out-kg-wrap">
+              <span class="calc-out-lbl">Weight-based dose</span>
+              <span class="calc-out-val" id="calc-out-kg">—</span>
+            </div>
+            <p class="calc-range" id="calc-range"></p>
+          </div>
+
+          <button type="button" class="chip" id="calc-copy">📋 Copy result</button>
+
+          <hr />
+
+          <!-- Reverse: target dose → rate -->
+          <h3 class="cpr-h">Target dose → pump rate</h3>
+          <div class="calc-conc-row">
+            <input id="calc-target" type="text" inputmode="decimal" maxlength="7" placeholder="target" autocomplete="off" />
+            <select id="calc-target-unit"></select>
+            <span class="calc-arrow">→</span>
+            <span class="calc-out-val" id="calc-out-rate">—</span>
+          </div>
+
+          <p class="disclaimer">
+            ⚠️ Verify every dose against your hospital protocol, the drug label and the pump before use.
+            This is a calculation aid, not a prescription — concentrations and dose ranges vary by
+            preparation and patient.
+          </p>
+        </div>
       </main>
     </section>
 

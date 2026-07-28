@@ -1939,3 +1939,278 @@ setInterval(() => {
     if (selectedId && encounters[selectedId]) dUpdated.textContent = relTime(encounters[selectedId].updatedAt);
   }
 }, 15000);
+
+// ---------------------------------------------------------------------------
+// DRUG DOSE CALCULATOR — inotropes / vasopressors
+// dose(mcg/min)     = rate(mL/hr) × conc(mcg/mL) / 60
+// dose(mcg/kg/min)  = dose(mcg/min) / weight(kg)
+// conc(mcg/mL)      = amount(mg) × 1000 / volume(mL)   (or U/mL for vasopressin)
+// Ranges are usual-practice guidance only — always verify against protocol.
+// ---------------------------------------------------------------------------
+const PRESSORS = [
+  {
+    key: "norepi", name: "Norepinephrine (Levophed)", massUnit: "mcg", weightBased: true,
+    range: { lo: 0.01, hi: 3, unit: "mcg/kg/min" },
+    note: "Start 0.05 mcg/kg/min, titrate to MAP >= 65. Doses expressed as the salt.",
+    preps: [
+      { label: "4 mg / 250 mL  (16 mcg/mL)", mg: 4, ml: 250 },
+      { label: "4 mg / 50 mL  (80 mcg/mL, central)", mg: 4, ml: 50 },
+      { label: "8 mg / 250 mL  (32 mcg/mL)", mg: 8, ml: 250 },
+      { label: "16 mg / 250 mL  (64 mcg/mL)", mg: 16, ml: 250 },
+    ],
+  },
+  {
+    key: "epi", name: "Adrenaline / Epinephrine", massUnit: "mcg", weightBased: true,
+    range: { lo: 0.01, hi: 0.5, unit: "mcg/kg/min" },
+    note: "Infusion 0.01-0.5 mcg/kg/min; start ~0.05 and titrate.",
+    preps: [
+      { label: "4 mg / 250 mL  (16 mcg/mL)", mg: 4, ml: 250 },
+      { label: "1 mg / 250 mL  (4 mcg/mL)", mg: 1, ml: 250 },
+      { label: "4 mg / 50 mL  (80 mcg/mL, central)", mg: 4, ml: 50 },
+    ],
+  },
+  {
+    key: "dopamine", name: "Dopamine", massUnit: "mcg", weightBased: true,
+    range: { lo: 2, hi: 20, unit: "mcg/kg/min" },
+    note: "2-5 dopaminergic · 5-10 beta/inotrope · 10-20 mcg/kg/min alpha/pressor.",
+    preps: [
+      { label: "200 mg / 250 mL  (800 mcg/mL)", mg: 200, ml: 250 },
+      { label: "400 mg / 250 mL  (1600 mcg/mL)", mg: 400, ml: 250 },
+      { label: "250 mg / 250 mL  (1000 mcg/mL)", mg: 250, ml: 250 },
+    ],
+  },
+  {
+    key: "dobutamine", name: "Dobutamine", massUnit: "mcg", weightBased: true,
+    range: { lo: 2, hi: 20, unit: "mcg/kg/min" },
+    note: "Inotrope 2-20 mcg/kg/min; usual 5-15.",
+    preps: [
+      { label: "250 mg / 250 mL  (1000 mcg/mL)", mg: 250, ml: 250 },
+      { label: "500 mg / 250 mL  (2000 mcg/mL)", mg: 500, ml: 250 },
+      { label: "250 mg / 50 mL  (5000 mcg/mL)", mg: 250, ml: 50 },
+    ],
+  },
+  {
+    key: "phenylephrine", name: "Phenylephrine", massUnit: "mcg", weightBased: true,
+    range: { lo: 0.1, hi: 1.4, unit: "mcg/kg/min" },
+    note: "Infusion 0.1-1.4 mcg/kg/min (approx 10-200 mcg/min). Bolus 50-200 mcg.",
+    preps: [
+      { label: "10 mg / 250 mL  (40 mcg/mL)", mg: 10, ml: 250 },
+      { label: "50 mg / 250 mL  (200 mcg/mL)", mg: 50, ml: 250 },
+      { label: "10 mg / 100 mL  (100 mcg/mL)", mg: 10, ml: 100 },
+    ],
+  },
+  {
+    key: "vasopressin", name: "Vasopressin", massUnit: "unit", weightBased: false,
+    range: { lo: 0.01, hi: 0.04, unit: "U/min" },
+    note: "Septic shock: fixed 0.03 U/min — not titrated, not weight-based.",
+    preps: [
+      { label: "20 U / 100 mL  (0.2 U/mL)", u: 20, ml: 100 },
+      { label: "40 U / 100 mL  (0.4 U/mL)", u: 40, ml: 100 },
+      { label: "20 U / 50 mL  (0.4 U/mL)", u: 20, ml: 50 },
+    ],
+  },
+];
+
+const calcDrugSel = $("calc-drug");
+const calcPrepSel = $("calc-prep");
+const calcDrugNote = $("calc-drug-note");
+const calcWeight = $("calc-weight");
+const calcRate = $("calc-rate");
+const calcAmt = $("calc-amt");
+const calcAmtUnit = $("calc-amt-unit");
+const calcVol = $("calc-vol");
+const calcConcEl = $("calc-conc");
+const calcOutMin = $("calc-out-min");
+const calcOutKg = $("calc-out-kg");
+const calcOutKgWrap = $("calc-out-kg-wrap");
+const calcRangeEl = $("calc-range");
+const calcTarget = $("calc-target");
+const calcTargetUnit = $("calc-target-unit");
+const calcOutRate = $("calc-out-rate");
+const calcScreen = $("calc-screen");
+const dotCalc = $("dot-calc");
+
+let curDrug = PRESSORS[0];
+
+// Short mass label ("mcg" for most, "U" for vasopressin).
+const massShort = (d) => (d.massUnit === "unit" ? "U" : "mcg");
+
+// Show a dose with a sensible number of decimals, trailing zeros trimmed.
+function fmtDose(v) {
+  if (!isFinite(v) || v <= 0) return "—";
+  const dp = v < 1 ? 3 : v < 10 ? 2 : 1;
+  return parseFloat(v.toFixed(dp)).toString();
+}
+
+// Current concentration in massUnit per mL (mcg/mL or U/mL).
+function currentConc() {
+  const amt = parseFloat(calcAmt.value);
+  const vol = parseFloat(calcVol.value);
+  if (!(amt > 0) || !(vol > 0)) return NaN;
+  return (curDrug.massUnit === "unit" ? amt : amt * 1000) / vol;
+}
+
+function showRange(value) {
+  const r = curDrug.range;
+  let cls = "within", txt = "within usual range";
+  if (value < r.lo) { cls = "low"; txt = "below usual starting range"; }
+  else if (value > r.hi) { cls = "high"; txt = "ABOVE usual max — double-check"; }
+  calcRangeEl.className = "calc-range " + cls;
+  calcRangeEl.textContent = "Usual " + r.lo + "-" + r.hi + " " + r.unit + " · " + txt;
+}
+
+function recomputeReverse(conc, w) {
+  const t = parseFloat(calcTarget.value);
+  if (!(t > 0) || !isFinite(conc)) { calcOutRate.textContent = "—"; return; }
+  let perMin;
+  if (calcTargetUnit.value === "perkg") {
+    if (!(w > 0)) { calcOutRate.textContent = "enter weight"; return; }
+    perMin = t * w;
+  } else {
+    perMin = t; // mcg/min or U/min
+  }
+  calcOutRate.textContent = fmtDose((perMin * 60) / conc) + " mL/hr";
+}
+
+function recompute() {
+  const conc = currentConc();
+  const w = parseFloat(calcWeight.value);
+  const rate = parseFloat(calcRate.value);
+
+  calcConcEl.textContent = isFinite(conc)
+    ? "= " + fmtDose(conc) + " " + massShort(curDrug) + "/mL"
+    : "";
+
+  if (isFinite(conc) && rate > 0) {
+    const perMin = (rate * conc) / 60;
+    calcOutMin.textContent = fmtDose(perMin) + " " + massShort(curDrug) + "/min";
+    if (curDrug.weightBased) {
+      calcOutKgWrap.style.display = "";
+      if (w > 0) {
+        const perKg = perMin / w;
+        calcOutKg.textContent = fmtDose(perKg) + " mcg/kg/min";
+        showRange(perKg);
+      } else {
+        calcOutKg.textContent = "enter weight";
+        calcRangeEl.textContent = "";
+        calcRangeEl.className = "calc-range";
+      }
+    } else {
+      calcOutKgWrap.style.display = "none";
+      showRange(perMin); // vasopressin: compare U/min directly
+    }
+  } else {
+    calcOutMin.textContent = "—";
+    calcOutKg.textContent = "—";
+    calcRangeEl.textContent = "";
+    calcRangeEl.className = "calc-range";
+  }
+
+  recomputeReverse(conc, w);
+}
+
+function applyPrep(i) {
+  const p = curDrug.preps[i];
+  if (!p) return;
+  calcAmt.value = curDrug.massUnit === "unit" ? p.u : p.mg;
+  calcVol.value = p.ml;
+  calcPrepSel.value = String(i);
+  recompute();
+}
+
+function selectDrug(key) {
+  curDrug = PRESSORS.find((d) => d.key === key) || PRESSORS[0];
+  calcDrugNote.textContent = curDrug.note;
+  calcAmtUnit.textContent = curDrug.massUnit === "unit" ? "units" : "mg";
+
+  // Preparation presets (+ a "Custom…" sentinel).
+  calcPrepSel.innerHTML = "";
+  curDrug.preps.forEach((p, i) => {
+    const o = document.createElement("option");
+    o.value = String(i);
+    o.textContent = p.label;
+    calcPrepSel.appendChild(o);
+  });
+  const cust = document.createElement("option");
+  cust.value = "custom";
+  cust.textContent = "Custom…";
+  calcPrepSel.appendChild(cust);
+
+  // Target-dose units depend on whether the drug is weight-based.
+  calcTargetUnit.innerHTML = "";
+  const unitOpts = curDrug.weightBased
+    ? [["perkg", "mcg/kg/min"], ["permin", "mcg/min"]]
+    : [["permin", "U/min"]];
+  unitOpts.forEach(([val, txt]) => {
+    const o = document.createElement("option");
+    o.value = val;
+    o.textContent = txt;
+    calcTargetUnit.appendChild(o);
+  });
+
+  applyPrep(0); // seed concentration from the first prep, then compute
+}
+
+calcDrugSel.addEventListener("change", () => selectDrug(calcDrugSel.value));
+calcPrepSel.addEventListener("change", () => {
+  if (calcPrepSel.value !== "custom") applyPrep(parseInt(calcPrepSel.value, 10));
+});
+// Editing the amount/volume by hand switches the prep selector to "Custom…".
+[calcAmt, calcVol].forEach((el) =>
+  el.addEventListener("input", () => {
+    calcPrepSel.value = "custom";
+    recompute();
+  })
+);
+[calcWeight, calcRate, calcTarget].forEach((el) => el.addEventListener("input", recompute));
+calcTargetUnit.addEventListener("change", recompute);
+
+$("calc-copy").addEventListener("click", async () => {
+  const min = calcOutMin.textContent;
+  const kg = curDrug.weightBased ? calcOutKg.textContent : "";
+  if (min === "—") return;
+  const summary =
+    curDrug.name +
+    " " + (calcConcEl.textContent || "").replace(/^=\s*/, "") +
+    " at " + (calcRate.value || "?") + " mL/hr" +
+    (calcWeight.value ? " (" + calcWeight.value + " kg)" : "") +
+    " = " + min + (kg && kg !== "enter weight" ? " = " + kg : "");
+  try {
+    await navigator.clipboard.writeText(summary);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = summary;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+  const btn = $("calc-copy");
+  const prev = btn.textContent;
+  btn.textContent = "✓ Copied";
+  setTimeout(() => (btn.textContent = prev), 1200);
+});
+
+// Populate the drug picker once, then seed the default drug.
+PRESSORS.forEach((d) => {
+  const o = document.createElement("option");
+  o.value = d.key;
+  o.textContent = d.name;
+  calcDrugSel.appendChild(o);
+});
+selectDrug(PRESSORS[0].key);
+
+// Open from either role's top bar; remember where to return.
+let calcReturn = "bedside";
+document.querySelectorAll("[data-open-calc]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    calcReturn = role || "bedside";
+    hideAll();
+    calcScreen.classList.remove("hidden");
+    dotCalc.classList.toggle("online", !!uid);
+  });
+});
+$("calc-back").addEventListener("click", () => {
+  role = calcReturn;
+  showRole();
+});
