@@ -430,6 +430,30 @@ body {
   margin: 0 0 8px;
 }
 
+/* Emoji picker for template names */
+.emoji-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex-basis: 100%;
+  margin-bottom: 4px;
+}
+
+.emoji-btn {
+  font-size: 18px;
+  line-height: 1;
+  padding: 3px 5px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.emoji-btn:hover {
+  border-color: var(--primary);
+  background: #f0fdfa;
+}
+
 .chip-editor {
   display: flex;
   gap: 6px;

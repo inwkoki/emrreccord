@@ -1056,6 +1056,21 @@ function saveTemplate() {
   }
   resetTemplateEditor();
 }
+// Emoji picker: prepend the chosen icon to the template name (swap any existing).
+document.querySelectorAll("#tpl-emoji-row .emoji-btn").forEach((b) => {
+  b.addEventListener("click", () => {
+    const inp = document.getElementById("tpl-name");
+    let rest = inp.value;
+    try {
+      rest = rest.replace(/^\s*\p{Extended_Pictographic}[\p{Extended_Pictographic}️‍]*\s*/u, "");
+    } catch {
+      rest = rest.replace(/^\s*\S*\s*/, ""); // fallback
+    }
+    inp.value = b.textContent + " " + rest;
+    inp.focus();
+  });
+});
+
 document.getElementById("tpl-save-confirm").addEventListener("click", saveTemplate);
 document.getElementById("tpl-name").addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
