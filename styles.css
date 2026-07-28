@@ -368,9 +368,42 @@ body {
 
 .chip-row.editing .chip.custom .x,
 .chip-row.editing .chip.custom .mv,
-#my-templates-bar.editing .chip.custom .x,
-#my-templates-bar.editing .chip.custom .mv {
+#templates-panel.editing .chip.custom .x,
+#templates-panel.editing .chip.custom .mv {
   display: inline;
+}
+
+/* Collapsible templates panel */
+.tpl-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 10px 0 4px;
+}
+
+.tpl-panel {
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 6px;
+}
+
+.tpl-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.tpl-group + .tpl-group {
+  border-top: 1px dashed #99f6e4;
+}
+
+.chip.cond.qt-hidden {
+  opacity: 0.45;
 }
 
 .chip-editor {

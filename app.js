@@ -115,6 +115,7 @@ const seenUpdatedAt = {}; // id -> last updatedAt (for flash detection)
 let customChips = {
   ud: [], mgmt: [], abx: [], vaso: [], fluidtypes: [], neb: [],
   ex0: [], ex1: [], ex2: [], ex3: [], ex4: [], ex5: [], ex6: [], // exam-builder per-system options
+  hiddenQt: [], // quick-templates the user has hidden
 };
 let chipsSubscribed = false;
 let customNormalPe = ""; // per-user editable "Normal" physical-exam text
@@ -851,7 +852,7 @@ const TEMPLATE_FIELDS = [
 let userTemplates = {};
 let templatesSubscribed = false;
 const myTemplatesEl = document.getElementById("my-templates");
-const myTemplatesBar = document.getElementById("my-templates-bar");
+const myTemplatesBar = document.getElementById("templates-panel");
 
 function subscribeUserTemplates() {
   if (templatesSubscribed || !db || !uid) return;
@@ -995,6 +996,7 @@ function resetTemplateEditor() {
 }
 
 document.getElementById("save-template").addEventListener("click", () => {
+  document.getElementById("templates-panel").classList.remove("hidden"); // expand panel
   const ed = document.getElementById("save-template-editor");
   const willShow = ed.classList.contains("hidden");
   resetTemplateEditor(); // start a fresh (non-editing) save
@@ -1005,7 +1007,10 @@ document.getElementById("save-template").addEventListener("click", () => {
   }
 });
 document.getElementById("tpl-edit").addEventListener("click", () => {
-  myTemplatesBar.classList.toggle("editing");
+  const panel = document.getElementById("templates-panel");
+  panel.classList.remove("hidden"); // expand so edits are visible
+  panel.classList.toggle("editing");
+  renderQuickTemplates(); // show/hide the ✕/↺ hide toggles
 });
 function saveTemplate() {
   const name = document.getElementById("tpl-name").value.trim();
@@ -1275,11 +1280,12 @@ function subscribeCustomChips() {
   onValue(ref(db, "users/" + uid + "/chips"), (snap) => {
     const v = snap.val() || {};
     ["ud", "mgmt", "abx", "vaso", "fluidtypes", "neb",
-     "ex0", "ex1", "ex2", "ex3", "ex4", "ex5", "ex6"].forEach((g) => {
+     "ex0", "ex1", "ex2", "ex3", "ex4", "ex5", "ex6", "hiddenQt"].forEach((g) => {
       customChips[g] = v[g] ? Object.values(v[g]) : [];
       renderCustomChips(g);
     });
     [0, 1, 2, 3, 4, 5, 6].forEach(renderExamDatalist);
+    renderQuickTemplates();
   });
   onValue(ref(db, "users/" + uid + "/normalPe"), (snap) => {
     customNormalPe = snap.val() || "";
@@ -1470,14 +1476,71 @@ const CONDITION_TEMPLATES = {
   },
 };
 
-document.querySelectorAll("[data-cond]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const fn = CONDITION_TEMPLATES[btn.dataset.cond];
-    if (fn) {
-      fn();
-      setStatus(bedsideStatus, "Inserted " + btn.dataset.cond + " template.", "ok");
+// Quick (condition) templates — rendered dynamically so they can be hidden
+// per user via the ✏️ edit toggle.
+const QUICK_TEMPLATES = [
+  { key: "sepsis", label: "🦠 Sepsis" },
+  { key: "chestpain", label: "🫀 Chest pain" },
+  { key: "anaphylaxis", label: "🐝 Anaphylaxis" },
+  { key: "stroke", label: "🧠 Stroke" },
+  { key: "trauma", label: "🚑 Trauma" },
+];
+
+function renderQuickTemplates() {
+  const el = document.getElementById("quick-templates");
+  if (!el) return;
+  el.innerHTML = "";
+  const editing = document.getElementById("templates-panel").classList.contains("editing");
+  const hidden = customChips.hiddenQt || [];
+  QUICK_TEMPLATES.forEach((qt) => {
+    const isHidden = hidden.includes(qt.key);
+    if (!editing && isHidden) return;
+    if (!editing) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chip cond";
+      btn.textContent = qt.label;
+      btn.addEventListener("click", () => {
+        const fn = CONDITION_TEMPLATES[qt.key];
+        if (fn) {
+          fn();
+          setStatus(bedsideStatus, "Inserted " + qt.key + " template.", "ok");
+        }
+      });
+      el.appendChild(btn);
+    } else {
+      const chip = document.createElement("span");
+      chip.className = "chip cond custom" + (isHidden ? " qt-hidden" : "");
+      const t = document.createElement("span");
+      t.className = "lbl-txt";
+      t.textContent = qt.label;
+      t.style.cursor = "default";
+      const x = document.createElement("button");
+      x.type = "button";
+      x.className = "x";
+      x.style.display = "inline";
+      x.textContent = isHidden ? "↺" : "✕";
+      x.title = isHidden ? "restore" : "hide";
+      x.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        const h = customChips.hiddenQt || (customChips.hiddenQt = []);
+        if (isHidden) {
+          const i = h.indexOf(qt.key);
+          if (i >= 0) h.splice(i, 1);
+        } else h.push(qt.key);
+        saveCustomChips("hiddenQt");
+        renderQuickTemplates();
+      });
+      chip.append(t, x);
+      el.appendChild(chip);
     }
   });
+}
+renderQuickTemplates();
+
+// Collapse/expand the whole templates panel.
+document.getElementById("templates-toggle").addEventListener("click", () => {
+  document.getElementById("templates-panel").classList.toggle("hidden");
 });
 
 sendBtn.addEventListener("click", async () => {

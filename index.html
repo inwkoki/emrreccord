@@ -81,38 +81,26 @@
         <div class="patient-tabs" id="patient-tabs"></div>
         <div class="sent-row"><span id="sent-note" class="sent-note"></span></div>
 
-        <!-- Condition quick-templates -->
-        <div class="tpl-bar">
-          <span class="tpl-bar-label">Quick template:</span>
-          <button type="button" class="chip cond" data-cond="sepsis">🦠 Sepsis</button>
-          <button type="button" class="chip cond" data-cond="chestpain">🫀 Chest pain</button>
-          <button type="button" class="chip cond" data-cond="anaphylaxis">🐝 Anaphylaxis</button>
-          <button type="button" class="chip cond" data-cond="stroke">🧠 Stroke</button>
-          <button type="button" class="chip cond" data-cond="trauma">🚑 Trauma</button>
+        <!-- Templates (collapsible; combines quick + mine + dept) -->
+        <div class="tpl-panel-head">
+          <button type="button" id="templates-toggle" class="chip">⚡ Templates</button>
+          <button type="button" class="chip" id="save-template">💾 Save</button>
+          <button type="button" class="chip mini edit" id="tpl-edit" title="Edit / hide templates">✏️</button>
         </div>
-
-        <!-- Per-user saved templates -->
-        <div class="tpl-bar" id="my-templates-bar">
-          <span class="tpl-bar-label">My templates:</span>
-          <span id="my-templates" class="custom-chips"></span>
-          <button type="button" class="chip" id="save-template">💾 Save current</button>
-          <button type="button" class="chip mini edit" id="tpl-edit" title="Delete templates">✏️</button>
-        </div>
-        <div class="chip-editor hidden" id="save-template-editor">
-          <input id="tpl-name" type="text" placeholder="Template name…" maxlength="40" autocomplete="off" />
-          <label class="share-label"><input type="checkbox" id="tpl-share" /> Share with dept</label>
-          <button type="button" class="chip mini" id="tpl-save-confirm">Save template</button>
-        </div>
-        <p id="macro-hint" class="hint hidden">
-          💡 <b>Auto-time macros</b> — type these in any field before saving; they fill in when the template is applied:
-          <code>{{now}}</code> current time · <code>{{now+2h}}</code> 2 h later · <code>{{now+30m}}</code> 30 min later · <code>{{date}}</code> today.
-          <br />Example: “Observe for 2 hours (until {{now+2h}})”.
-        </p>
-
-        <!-- Department (shared) templates -->
-        <div class="tpl-bar" id="dept-templates-bar">
-          <span class="tpl-bar-label">Dept templates:</span>
-          <span id="dept-templates" class="custom-chips"></span>
+        <div id="templates-panel" class="tpl-panel hidden">
+          <div class="tpl-group"><span class="tpl-bar-label">Quick</span><span id="quick-templates" class="custom-chips"></span></div>
+          <div class="tpl-group"><span class="tpl-bar-label">Mine</span><span id="my-templates" class="custom-chips"></span></div>
+          <div class="tpl-group"><span class="tpl-bar-label">Dept</span><span id="dept-templates" class="custom-chips"></span></div>
+          <div class="chip-editor hidden" id="save-template-editor">
+            <input id="tpl-name" type="text" placeholder="Template name…" maxlength="40" autocomplete="off" />
+            <label class="share-label"><input type="checkbox" id="tpl-share" /> Share with dept</label>
+            <button type="button" class="chip mini" id="tpl-save-confirm">Save template</button>
+          </div>
+          <p id="macro-hint" class="hint hidden">
+            💡 <b>Auto-time macros</b> — type these in any field before saving; they fill in when the template is applied:
+            <code>{{now}}</code> · <code>{{now+2h}}</code> · <code>{{now+30m}}</code> · <code>{{date}}</code>.
+            Example: “Observe until {{now+2h}}”.
+          </p>
         </div>
 
         <label class="lbl">Bed / identifier <span class="req">*</span></label>
