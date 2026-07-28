@@ -71,7 +71,7 @@
         <div><span class="dot" id="dot-bedside"></span> 📱 Bedside — <span id="me-bedside"></span></div>
         <div class="topbar-right">
           <button class="ghost-btn" id="open-cpr">🫀 CPR</button>
-          <button class="ghost-btn" data-open-calc title="Drug dose calculator">🧮 Drips</button>
+          <button class="ghost-btn" data-open-calc title="Reference &amp; drug tools">📚 Ref</button>
           <button class="ghost-btn" data-switch="station">🖥️ Station</button>
           <button class="ghost-btn" data-settings title="Account">⚙️</button>
           <button class="ghost-btn" data-signout>Sign out</button>
@@ -360,7 +360,7 @@
         <div><span class="dot" id="dot-station"></span> 🖥️ Station — <span id="active-count">0</span> active</div>
         <div class="topbar-right">
           <span id="me-station" class="muted"></span>
-          <button class="ghost-btn" data-open-calc title="Drug dose calculator">🧮 Drips</button>
+          <button class="ghost-btn" data-open-calc title="Reference &amp; drug tools">📚 Ref</button>
           <button class="ghost-btn" data-switch="bedside">📱 Bedside</button>
           <button class="ghost-btn" data-settings title="Account">⚙️</button>
           <button class="ghost-btn" data-signout>Sign out</button>
@@ -588,7 +588,7 @@
     <!-- ================= DRUG DOSE CALCULATOR ================= -->
     <section id="calc-screen" class="screen hidden">
       <header class="topbar">
-        <div><span class="dot" id="dot-calc"></span> 🧮 Drug dose reference &amp; calc</div>
+        <div><span class="dot" id="dot-calc"></span> 📚 Reference &amp; tools</div>
         <div class="topbar-right">
           <button class="ghost-btn" id="calc-back">← Back</button>
           <button class="ghost-btn" data-settings title="Account">⚙️</button>
@@ -598,8 +598,11 @@
 
       <main class="bedside-body">
         <div class="calc-tabs" id="calc-tabs">
-          <button type="button" class="chip active" data-calc-tab="pressor">💉 Drip calculator</button>
-          <button type="button" class="chip" data-calc-tab="highalert">⚠️ High-alert reference</button>
+          <button type="button" class="chip active" data-calc-tab="pressor">💉 Drips</button>
+          <button type="button" class="chip" data-calc-tab="highalert">⚠️ High-alert</button>
+          <button type="button" class="chip" data-calc-tab="rsi">💊 RSI</button>
+          <button type="button" class="chip" data-calc-tab="tbi">🧠 Mild TBI</button>
+          <button type="button" class="chip" data-calc-tab="peds">👶 Peds vitals</button>
         </div>
 
         <!-- ===== Inotrope / vasopressor drip calculator ===== -->
@@ -648,6 +651,7 @@
             <p class="calc-range" id="calc-range"></p>
           </div>
 
+          <button type="button" class="chip eb-insert" id="calc-to-mgmt">⬇ To management</button>
           <button type="button" class="chip" id="calc-copy">📋 Copy result</button>
 
           <hr />
@@ -676,6 +680,36 @@
             your own unit's current protocol.
           </p>
           <div id="ha-cards"></div>
+        </div>
+
+        <!-- ===== RSI drugs ===== -->
+        <div id="calc-rsi" class="calc-pane hidden">
+          <p class="hint">
+            Rapid-sequence intubation — typical <b>adult</b> IV doses with key cautions / contraindications.
+            A quick reference; confirm each drug for the individual patient.
+          </p>
+          <div id="rsi-cards"></div>
+          <p class="disclaimer">⚠️ Verify doses, indications and contraindications against current protocol and the patient's condition before use.</p>
+        </div>
+
+        <!-- ===== Mild TBI risk stratification ===== -->
+        <div id="calc-tbi" class="calc-pane hidden">
+          <p class="hint">
+            Mild traumatic brain injury — risk stratification (Thai CPG). Assign the patient to the
+            <b>highest</b> group for which any criterion is met, then follow its disposition.
+          </p>
+          <div id="tbi-cards"></div>
+          <p class="disclaimer">⚠️ Decision guide only — follow your institution's TBI protocol and clinical judgement.</p>
+        </div>
+
+        <!-- ===== Pediatric vital signs ===== -->
+        <div id="calc-peds" class="calc-pane hidden">
+          <p class="hint">
+            Normal paediatric vital signs by age (PALS reference) with rough resuscitation estimates.
+            SBP↓ = hypotension threshold. Weight/ETT are estimates — use a length-based tape when available.
+          </p>
+          <div id="peds-table"></div>
+          <p class="disclaimer">⚠️ Reference only — confirm against a validated length-based resuscitation tool for the individual child.</p>
         </div>
       </main>
     </section>

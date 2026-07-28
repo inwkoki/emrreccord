@@ -2161,16 +2161,30 @@ calcPrepSel.addEventListener("change", () => {
 [calcWeight, calcRate, calcTarget].forEach((el) => el.addEventListener("input", recompute));
 calcTargetUnit.addEventListener("change", recompute);
 
-$("calc-copy").addEventListener("click", async () => {
+// One-line summary of the current drip result, e.g.
+// "Norepinephrine 16 mcg/mL at 5 mL/hr (60 kg) = 1.33 mcg/min = 0.022 mcg/kg/min".
+function calcSummary() {
   const min = calcOutMin.textContent;
+  if (min === "—") return "";
   const kg = curDrug.weightBased ? calcOutKg.textContent : "";
-  if (min === "—") return;
-  const summary =
+  return (
     curDrug.name +
     " " + (calcConcEl.textContent || "").replace(/^=\s*/, "") +
     " at " + (calcRate.value || "?") + " mL/hr" +
     (calcWeight.value ? " (" + calcWeight.value + " kg)" : "") +
-    " = " + min + (kg && kg !== "enter weight" ? " = " + kg : "");
+    " = " + min + (kg && kg !== "enter weight" ? " = " + kg : "")
+  );
+}
+
+function flashBtn(btn, msg) {
+  const prev = btn.textContent;
+  btn.textContent = msg;
+  setTimeout(() => (btn.textContent = prev), 1200);
+}
+
+$("calc-copy").addEventListener("click", async () => {
+  const summary = calcSummary();
+  if (!summary) return;
   try {
     await navigator.clipboard.writeText(summary);
   } catch {
@@ -2181,10 +2195,18 @@ $("calc-copy").addEventListener("click", async () => {
     document.execCommand("copy");
     ta.remove();
   }
-  const btn = $("calc-copy");
-  const prev = btn.textContent;
-  btn.textContent = "✓ Copied";
-  setTimeout(() => (btn.textContent = prev), 1200);
+  flashBtn($("calc-copy"), "✓ Copied");
+});
+
+// Drop the computed drip straight into the bedside "Initial management" field.
+$("calc-to-mgmt").addEventListener("click", () => {
+  const summary = calcSummary();
+  if (!summary) {
+    flashBtn($("calc-to-mgmt"), "enter rate first");
+    return;
+  }
+  addMgmtLine(summary); // appends "- <summary>" to fManagement (deduped)
+  flashBtn($("calc-to-mgmt"), "✓ Added to management");
 });
 
 // Populate the drug picker once, then seed the default drug.
@@ -2364,15 +2386,240 @@ function renderHighAlert() {
   });
 }
 
-// Tab switching within the calculator screen.
+// ---------------------------------------------------------------------------
+// RSI drugs, Mild TBI risk stratification, Paediatric vitals — reference cards
+// General ED references (not drug-specific KKU docs). Verify locally.
+// ---------------------------------------------------------------------------
+const RSI_DRUGS = [
+  { name: "Etomidate", tag: "Induction", rows: [
+    ["Dose", "0.3 mg/kg IV"],
+    ["Onset", "15-45 s · duration 3-5 min"],
+    ["Notes", "Haemodynamically neutral — good in shock / head injury. Myoclonus; transient adrenal suppression"],
+  ] },
+  { name: "Ketamine", tag: "Induction", rows: [
+    ["Dose", "1-2 mg/kg IV (~1.5)"],
+    ["Onset", "45-60 s · duration 10-20 min"],
+    ["Notes", "Maintains BP, bronchodilator — good in shock / asthma"],
+    ["Caution", "Severe uncontrolled HTN, significant CAD / aortic dissection; emergence phenomena", true],
+  ] },
+  { name: "Propofol", tag: "Induction", rows: [
+    ["Dose", "1.5-2.5 mg/kg IV"],
+    ["Onset", "15-45 s · duration 5-10 min"],
+    ["Caution", "Hypotension — avoid or reduce dose in shock / hypovolaemia", true],
+  ] },
+  { name: "Midazolam", tag: "Induction", rows: [
+    ["Dose", "0.1-0.3 mg/kg IV"],
+    ["Onset", "30-60 s"],
+    ["Caution", "Hypotension, respiratory depression; unreliable as sole induction agent", true],
+  ] },
+  { name: "Fentanyl", tag: "Adjunct", rows: [
+    ["Dose", "1-3 mcg/kg IV"],
+    ["Notes", "Blunts sympathetic response to laryngoscopy"],
+    ["Caution", "Hypotension / apnoea; chest-wall rigidity with high dose or rapid push", true],
+  ] },
+  { name: "Succinylcholine", tag: "Paralytic — depolarising", rows: [
+    ["Dose", "1-1.5 mg/kg IV (peds <10 y: 2 mg/kg)"],
+    ["Onset", "45-60 s · duration 6-10 min"],
+    ["Contraindic.", "Hyperkalaemia; burns / crush / denervation / spinal cord injury >48-72 h; personal or family history of malignant hyperthermia; neuromuscular disease; pseudocholinesterase deficiency", true],
+  ] },
+  { name: "Rocuronium", tag: "Paralytic — non-depol.", rows: [
+    ["Dose", "1-1.2 mg/kg IV (RSI)"],
+    ["Onset", "45-60 s · duration 45-70 min"],
+    ["Notes", "No major contraindication except hypersensitivity. Long duration — ensure ongoing sedation; reversible with sugammadex"],
+  ] },
+  { name: "Atropine", tag: "Paeds pre-treat", rows: [
+    ["Dose", "0.02 mg/kg IV (min 0.1 mg, max 0.5 mg)"],
+    ["Notes", "Consider for bradycardia prophylaxis in infants / young children"],
+  ] },
+];
+
+const TBI_GROUPS = [
+  {
+    name: "Group 1 — Low risk", cls: "green", need: "Must have ALL of the following",
+    items: ["Asymptomatic", "GCS 15", "No headache", "Scalp injury only — bruise or laceration"],
+    dispo: "Discharge home with a head-injury advice sheet",
+  },
+  {
+    name: "Group 2 — Moderate risk", cls: "amber", need: "Any ONE of the following",
+    items: [
+      "GCS 13-14",
+      "OR GCS 15 with any of: vomiting (<2 episodes), history of loss of consciousness, headache, post-traumatic amnesia / transient LOC (seconds), risk of coagulopathy, or drug / alcohol intoxication",
+    ],
+    dispo: "Observe / manage per protocol (chart 4)",
+  },
+  {
+    name: "Group 3 — High risk", cls: "red", need: "Any ONE of the following",
+    items: [
+      "GCS 13-14 persisting after 1-2 h observation",
+      "Suspected open skull fracture and/or skull base fracture",
+      "Vomiting >2 episodes",
+      "Fall in GCS >=2 points, not clearly from seizures, drugs, poor cerebral perfusion or metabolic cause",
+      "Focal neurological signs",
+      "Post-traumatic seizure",
+      "Age >=60",
+    ],
+    dispo: "CT brain / neurosurgical pathway (chart 5)",
+  },
+];
+
+const PEDS_VITALS = {
+  cols: ["Age", "HR (/min)", "RR (/min)", "SBP↓ (mmHg)", "Wt est (kg)", "ETT (mm)"],
+  rows: [
+    ["Neonate (0-1 mo)", "100-205", "30-60", "< 60", "~3.5", "3.0-3.5 uncuffed"],
+    ["Infant (1-12 mo)", "100-180", "30-53", "< 70", "4-10", "3.5-4.0"],
+    ["Toddler (1-2 y)", "98-140", "22-37", "< 70 + 2×age", "10-13", "4.0-4.5"],
+    ["Preschool (3-5 y)", "80-120", "20-28", "< 70 + 2×age", "14-18", "4.5-5.0"],
+    ["School (6-11 y)", "75-118", "18-25", "< 70 + 2×age", "20-38", "5.5-6.5"],
+    ["Adolescent (12-15 y)", "60-100", "12-20", "< 90", "40-60", "6.5-7.0 cuffed"],
+  ],
+  foot: "Estimates: weight (kg) ≈ (age+4)×2 for 1-10 y · uncuffed ETT ≈ age/4 + 4 · cuffed ETT ≈ age/4 + 3.5.",
+};
+
+// Shared reference-card builder (used by high-alert + RSI).
+function buildRefCard(d) {
+  const card = document.createElement("div");
+  card.className = "ha-card" + (d.cls ? " " + d.cls : "");
+
+  const head = document.createElement("div");
+  head.className = "ha-head";
+  const nm = document.createElement("span");
+  nm.className = "ha-name";
+  nm.textContent = d.name;
+  head.appendChild(nm);
+  if (d.strength) {
+    const st = document.createElement("span");
+    st.className = "ha-strength";
+    st.textContent = d.strength;
+    head.appendChild(st);
+  }
+  if (d.tag) {
+    const tg = document.createElement("span");
+    tg.className = "ha-tag";
+    tg.textContent = d.tag;
+    head.appendChild(tg);
+  }
+  card.appendChild(head);
+
+  (d.rows || []).forEach(([k, v, warn]) => {
+    const row = document.createElement("div");
+    row.className = "ha-row" + (warn ? " warn" : "");
+    const kk = document.createElement("span");
+    kk.className = "k";
+    kk.textContent = k;
+    const vv = document.createElement("span");
+    vv.className = "v";
+    vv.textContent = v;
+    row.append(kk, vv);
+    card.appendChild(row);
+  });
+
+  if (d.url) {
+    const a = document.createElement("a");
+    a.className = "ha-src";
+    a.href = d.url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.textContent = "KKU guideline ↗";
+    card.appendChild(a);
+  }
+  return card;
+}
+
+function renderRSI() {
+  const box = $("rsi-cards");
+  if (!box || box.childElementCount) return;
+  RSI_DRUGS.forEach((d) => box.appendChild(buildRefCard(d)));
+}
+
+function renderTBI() {
+  const box = $("tbi-cards");
+  if (!box || box.childElementCount) return;
+  TBI_GROUPS.forEach((g) => {
+    const card = document.createElement("div");
+    card.className = "ha-card " + g.cls;
+    const head = document.createElement("div");
+    head.className = "ha-head";
+    const nm = document.createElement("span");
+    nm.className = "ha-name";
+    nm.textContent = g.name;
+    head.appendChild(nm);
+    card.appendChild(head);
+
+    const need = document.createElement("p");
+    need.className = "ha-need";
+    need.textContent = g.need;
+    card.appendChild(need);
+
+    const ul = document.createElement("ul");
+    ul.className = "ha-list";
+    g.items.forEach((it) => {
+      const li = document.createElement("li");
+      li.textContent = it;
+      ul.appendChild(li);
+    });
+    card.appendChild(ul);
+
+    const dp = document.createElement("div");
+    dp.className = "ha-dispo";
+    const ar = document.createElement("span");
+    ar.className = "arrow";
+    ar.textContent = "→ ";
+    dp.appendChild(ar);
+    dp.appendChild(document.createTextNode(g.dispo));
+    card.appendChild(dp);
+
+    box.appendChild(card);
+  });
+}
+
+function renderPeds() {
+  const box = $("peds-table");
+  if (!box || box.childElementCount) return;
+  const wrap = document.createElement("div");
+  wrap.className = "ref-table-wrap";
+  const table = document.createElement("table");
+  table.className = "ref-table";
+
+  const thead = document.createElement("thead");
+  const htr = document.createElement("tr");
+  PEDS_VITALS.cols.forEach((c) => {
+    const th = document.createElement("th");
+    th.textContent = c;
+    htr.appendChild(th);
+  });
+  thead.appendChild(htr);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  PEDS_VITALS.rows.forEach((r) => {
+    const tr = document.createElement("tr");
+    r.forEach((cell) => {
+      const td = document.createElement("td");
+      td.textContent = cell;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  box.appendChild(wrap);
+
+  const foot = document.createElement("p");
+  foot.className = "hint";
+  foot.textContent = PEDS_VITALS.foot;
+  box.appendChild(foot);
+}
+
+// Tab switching within the reference screen (lazy-renders each pane once).
+const CALC_PANES = ["pressor", "highalert", "rsi", "tbi", "peds"];
+const CALC_LAZY = { highalert: renderHighAlert, rsi: renderRSI, tbi: renderTBI, peds: renderPeds };
 document.querySelectorAll("[data-calc-tab]").forEach((btn) => {
   btn.addEventListener("click", () => {
     const tab = btn.dataset.calcTab;
     document.querySelectorAll("[data-calc-tab]").forEach((b) =>
       b.classList.toggle("active", b === btn)
     );
-    $("calc-pressor").classList.toggle("hidden", tab !== "pressor");
-    $("calc-highalert").classList.toggle("hidden", tab !== "highalert");
-    if (tab === "highalert") renderHighAlert();
+    CALC_PANES.forEach((p) => $("calc-" + p).classList.toggle("hidden", p !== tab));
+    if (CALC_LAZY[tab]) CALC_LAZY[tab]();
   });
 });
