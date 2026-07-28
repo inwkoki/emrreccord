@@ -597,16 +597,16 @@
       </header>
 
       <main class="bedside-body">
-        <div class="calc-tabs" id="calc-tabs">
-          <button type="button" class="chip active" data-calc-tab="pressor">💉 Drips</button>
-          <button type="button" class="chip" data-calc-tab="highalert">⚠️ High-alert</button>
-          <button type="button" class="chip" data-calc-tab="rsi">💊 RSI</button>
-          <button type="button" class="chip" data-calc-tab="tbi">🧠 Mild TBI</button>
-          <button type="button" class="chip" data-calc-tab="peds">👶 Peds vitals</button>
+        <!-- Section menu (table of contents) — tiles are built in app.js -->
+        <div id="calc-home" class="calc-menu"></div>
+        <!-- Back bar shown inside a section -->
+        <div id="calc-secbar" class="calc-secbar hidden">
+          <button type="button" class="ghost-btn" id="calc-menu-back">← Menu</button>
+          <h3 id="calc-sec-title"></h3>
         </div>
 
         <!-- ===== Inotrope / vasopressor drip calculator ===== -->
-        <div id="calc-pressor" class="calc-pane">
+        <div id="calc-pressor" class="calc-pane hidden">
           <p class="hint">
             Work out the <b>actual dose delivered</b> from body weight, drip concentration and pump
             rate — or the pump rate needed for a <b>target dose</b>. Both directions update live.
@@ -680,6 +680,26 @@
             your own unit's current protocol.
           </p>
           <div id="ha-cards"></div>
+        </div>
+
+        <!-- ===== Adult codes (ACLS) ===== -->
+        <div id="calc-codesA" class="calc-pane hidden">
+          <p class="hint">
+            Adult resuscitation quick reference — critical doses, energies and steps.
+            Based on <b>AHA 2025 Guidelines</b>; see the full ACLS algorithm for branching detail.
+          </p>
+          <div id="codesA-cards"></div>
+          <p class="disclaimer">⚠️ Quick reference only — follow the full AHA ACLS algorithm and your local protocol.</p>
+        </div>
+
+        <!-- ===== Peds codes (PALS) ===== -->
+        <div id="calc-codesP" class="calc-pane hidden">
+          <p class="hint">
+            Paediatric resuscitation quick reference — weight-based doses and energies.
+            Based on <b>AHA/AAP 2025 Guidelines</b>; confirm weight with a length-based tape.
+          </p>
+          <div id="codesP-cards"></div>
+          <p class="disclaimer">⚠️ Quick reference only — follow the full AHA/AAP PALS algorithm and your local protocol.</p>
         </div>
 
         <!-- ===== RSI drugs ===== -->

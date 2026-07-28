@@ -2225,6 +2225,7 @@ document.querySelectorAll("[data-open-calc]").forEach((btn) => {
     calcReturn = role || "bedside";
     hideAll();
     calcScreen.classList.remove("hidden");
+    showCalcHome();
     dotCalc.classList.toggle("online", !!uid);
   });
 });
@@ -2610,16 +2611,207 @@ function renderPeds() {
   box.appendChild(foot);
 }
 
-// Tab switching within the reference screen (lazy-renders each pane once).
-const CALC_PANES = ["pressor", "highalert", "rsi", "tbi", "peds"];
-const CALC_LAZY = { highalert: renderHighAlert, rsi: renderRSI, tbi: renderTBI, peds: renderPeds };
-document.querySelectorAll("[data-calc-tab]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const tab = btn.dataset.calcTab;
-    document.querySelectorAll("[data-calc-tab]").forEach((b) =>
-      b.classList.toggle("active", b === btn)
-    );
-    CALC_PANES.forEach((p) => $("calc-" + p).classList.toggle("hidden", p !== tab));
-    if (CALC_LAZY[tab]) CALC_LAZY[tab]();
+// ---------------------------------------------------------------------------
+// Resuscitation quick reference — ACLS (adult) and PALS (paediatric)
+// Transcribed clinical content (doses, energies, steps) based on the
+// AHA / AAP 2025 Guidelines. Quick reference only — not the full algorithm.
+// ---------------------------------------------------------------------------
+const CODES_ADULT = [
+  { name: "Cardiac Arrest (ACLS)", tag: "Adult", cls: "red", sections: [
+    { label: "High-quality CPR", lines: [
+      "Push >=2 in (5 cm), 100-120/min, full recoil",
+      "30:2 without advanced airway; change compressor q2min",
+      "With advanced airway: 1 breath q6s (10/min) + continuous compressions",
+    ] },
+    { label: "VF / pVT (shockable)", lines: [
+      "Shock → CPR 2 min → IV/IO access",
+      "Epinephrine q3-5 min; amiodarone/lidocaine for refractory",
+    ] },
+    { label: "Asystole / PEA", lines: ["Epinephrine ASAP → CPR 2 min; treat reversible causes"] },
+    { label: "Shock energy", lines: ["Biphasic 120-200 J (per device; if unknown, max)", "Monophasic 360 J"] },
+    { label: "Drugs", lines: [
+      "Epinephrine 1 mg IV/IO q3-5 min",
+      "Amiodarone 300 mg then 150 mg  —or—  Lidocaine 1-1.5 then 0.5-0.75 mg/kg",
+    ] },
+    { label: "Reversible causes (H's & T's)", lines: [
+      "Hypovolemia · Hypoxia · H+ (acidosis) · Hypo-/hyperkalemia · Hypothermia",
+      "Tension pneumothorax · Tamponade · Toxins · Thrombosis (pulmonary) · Thrombosis (coronary)",
+    ] },
+  ] },
+  { name: "Bradycardia (with pulse)", tag: "Adult", cls: "amber", sections: [
+    { label: "When to treat", lines: ["HR usually <50 with cardiopulmonary compromise (hypotension, AMS, shock, ischemic chest pain, acute HF)"] },
+    { label: "Treatment", lines: [
+      "Atropine 1 mg IV, repeat q3-5 min, max 3 mg",
+      "If ineffective: transcutaneous pacing and/or",
+      "Dopamine 5-20 mcg/kg/min  OR  Epinephrine 2-10 mcg/min infusion (titrate)",
+      "Consider expert consult / transvenous pacing",
+    ] },
+    { label: "Causes", lines: ["MI/ischemia · drugs (CCB, BB, digoxin) · hypoxia · hyperkalemia"] },
+  ] },
+  { name: "Tachycardia (with pulse)", tag: "Adult", cls: "amber", sections: [
+    { label: "Unstable", lines: ["HR usually >=150 with hypotension / AMS / shock / ischemic chest pain / acute HF → synchronized cardioversion (sedate)"] },
+    { label: "Stable — narrow QRS", lines: ["Vagal maneuvers", "Adenosine if regular", "Beta-blocker or calcium-channel blocker", "Expert consult"] },
+    { label: "Stable — wide QRS >=0.12 s", lines: ["Adenosine only if regular & monomorphic", "Antiarrhythmic infusion", "Expert consult"] },
+    { label: "Doses", lines: [
+      "Adenosine 6 mg rapid IV push + flush; 2nd dose 12 mg",
+      "Procainamide 20-50 mg/min (stop if suppressed / hypotension / QRS >50% / max 17 mg/kg); maint 1-4 mg/min",
+      "Amiodarone 150 mg over 10 min, repeat if VT recurs; maint 1 mg/min x6 h",
+    ] },
+  ] },
+  { name: "Electrical Cardioversion", tag: "Adult", cls: "blue", sections: [
+    { label: "Synchronized energy", lines: [
+      "Atrial fibrillation 200 J",
+      "Atrial flutter 200 J",
+      "Narrow-complex tachycardia 100 J",
+      "Monomorphic VT 100 J",
+      "Polymorphic VT → unsynchronized high-energy shock (defibrillation)",
+    ] },
+    { label: "Notes", lines: ["Sedate whenever feasible", "Resync after each cardioversion", "If critical & sync delayed → unsynchronized shock"] },
+  ] },
+];
+
+const CODES_PEDS = [
+  { name: "Cardiac Arrest (PALS)", tag: "Peds", cls: "red", sections: [
+    { label: "High-quality CPR", lines: [
+      "Push >=1/3 AP depth, 100-120/min, full recoil",
+      "15:2 (2 rescuers, prepuberty) · 30:2 (1 rescuer or postpuberty)",
+      "With advanced airway: continuous compressions + 1 breath q2-3s",
+    ] },
+    { label: "VF / pVT (shockable)", lines: ["Shock → CPR 2 min → epi q3-5 min", "Repeat shock → amiodarone or lidocaine"] },
+    { label: "Asystole / PEA", lines: ["Epinephrine ASAP → CPR 2 min"] },
+    { label: "Shock energy", lines: ["First 2 J/kg", "Second 4 J/kg", "Subsequent >=4 J/kg (max 10 J/kg or adult dose)"] },
+    { label: "Drugs", lines: [
+      "Epinephrine 0.01 mg/kg (0.1 mg/mL) IV/IO, max 1 mg, q3-5 min",
+      "Amiodarone 5 mg/kg bolus (max 300 mg), may repeat up to 3 doses",
+      "or Lidocaine 1 mg/kg",
+    ] },
+    { label: "Reversible causes", lines: [
+      "Hypovolemia · Hypoxia · H+ · Hypoglycemia · Hypo-/hyperkalemia · Hypothermia",
+      "Tension pneumothorax · Tamponade · Toxins · Thrombosis (pulmonary / coronary)",
+    ] },
+  ] },
+  { name: "Bradycardia (with pulse)", tag: "Peds", cls: "amber", sections: [
+    { label: "When to treat", lines: ["Cardiopulmonary compromise (AMS, shock, hypotension) despite oxygenation & ventilation"] },
+    { label: "Treatment", lines: [
+      "Start CPR if HR <60 with poor perfusion",
+      "Epinephrine 0.01 mg/kg (0.1 mg/mL) IV/IO, max 1 mg",
+      "Atropine 0.02 mg/kg IV/IO (min 0.1 mg, max single 0.5 mg), may repeat once — for vagal tone / primary AV block",
+      "Consider transthoracic / transvenous pacing",
+    ] },
+    { label: "Causes", lines: ["Hypothermia · hypoxia · toxins/meds · raised ICP · vagal tone · heart block"] },
+  ] },
+  { name: "Tachycardia (with pulse)", tag: "Peds", cls: "amber", sections: [
+    { label: "SVT vs sinus tach", lines: [
+      "SVT: infant >=220, child >=180; P absent/abnormal, RR not variable, abrupt onset",
+      "Sinus tach: infant <220, child <180; P present/normal, variable RR",
+    ] },
+    { label: "Unstable", lines: [
+      "Narrow (SVT): adenosine if IV/IO in place, or synchronized cardioversion",
+      "Wide (VT): synchronized cardioversion (expert consult before more drugs)",
+    ] },
+    { label: "Stable", lines: [
+      "Narrow (SVT): vagal maneuvers → adenosine",
+      "Wide: if regular & monomorphic, consider adenosine; expert consult",
+    ] },
+    { label: "Doses", lines: [
+      "Adenosine 0.1 mg/kg (max 6 mg) rapid push + flush; repeat 0.2 mg/kg (max 12 mg)",
+      "Synchronized cardioversion 0.5-1 J/kg; if ineffective 2 J/kg",
+    ] },
+  ] },
+];
+
+// Card with labelled bullet sections (used by ACLS / PALS).
+function buildCodeCard(d) {
+  const card = document.createElement("div");
+  card.className = "ha-card" + (d.cls ? " " + d.cls : "");
+  const head = document.createElement("div");
+  head.className = "ha-head";
+  const nm = document.createElement("span");
+  nm.className = "ha-name";
+  nm.textContent = d.name;
+  head.appendChild(nm);
+  if (d.tag) {
+    const tg = document.createElement("span");
+    tg.className = "ha-tag";
+    tg.textContent = d.tag;
+    head.appendChild(tg);
+  }
+  card.appendChild(head);
+  d.sections.forEach((sec) => {
+    const lb = document.createElement("p");
+    lb.className = "ha-need";
+    lb.textContent = sec.label;
+    card.appendChild(lb);
+    const ul = document.createElement("ul");
+    ul.className = "ha-list";
+    sec.lines.forEach((t) => {
+      const li = document.createElement("li");
+      li.textContent = t;
+      ul.appendChild(li);
+    });
+    card.appendChild(ul);
   });
-});
+  return card;
+}
+
+function renderCodes(boxId, data) {
+  const box = $(boxId);
+  if (!box || box.childElementCount) return;
+  data.forEach((d) => box.appendChild(buildCodeCard(d)));
+}
+function renderCodesA() { renderCodes("codesA-cards", CODES_ADULT); }
+function renderCodesP() { renderCodes("codesP-cards", CODES_PEDS); }
+
+// ---------------------------------------------------------------------------
+// Reference navigation: a section menu (table of contents) + section views.
+// Adding a new reference = add a pane in index.html + one entry here.
+// ---------------------------------------------------------------------------
+const SECTIONS = [
+  { key: "pressor", em: "💉", title: "Drip calculator", desc: "Inotrope / vasopressor rate ⇄ dose" },
+  { key: "highalert", em: "⚠️", title: "High-alert drugs", desc: "KKU injectable guidelines", lazy: renderHighAlert },
+  { key: "codesA", em: "🫀", title: "Adult codes", desc: "ACLS: arrest · brady · tachy · cardioversion", lazy: renderCodesA },
+  { key: "codesP", em: "👶", title: "Peds codes", desc: "PALS: arrest · brady · tachy", lazy: renderCodesP },
+  { key: "rsi", em: "💊", title: "RSI drugs", desc: "Induction & paralytics, doses", lazy: renderRSI },
+  { key: "tbi", em: "🧠", title: "Mild TBI", desc: "Thai CPG risk stratification", lazy: renderTBI },
+  { key: "peds", em: "📏", title: "Peds vital signs", desc: "PALS normal ranges by age", lazy: renderPeds },
+];
+
+function showCalcSection(key) {
+  const sec = SECTIONS.find((s) => s.key === key);
+  if (!sec) return;
+  $("calc-home").classList.add("hidden");
+  $("calc-secbar").classList.remove("hidden");
+  $("calc-sec-title").textContent = sec.em + " " + sec.title;
+  SECTIONS.forEach((s) => $("calc-" + s.key).classList.toggle("hidden", s.key !== key));
+  if (sec.lazy) sec.lazy();
+  document.querySelector(".bedside-body").scrollTop = 0;
+}
+
+function showCalcHome() {
+  $("calc-secbar").classList.add("hidden");
+  SECTIONS.forEach((s) => $("calc-" + s.key).classList.add("hidden"));
+  $("calc-home").classList.remove("hidden");
+}
+
+// Build the menu tiles once.
+(function buildCalcMenu() {
+  const home = $("calc-home");
+  SECTIONS.forEach((s) => {
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = "calc-tile";
+    const em = document.createElement("span");
+    em.className = "em";
+    em.textContent = s.em;
+    const ti = document.createElement("span");
+    ti.className = "ti";
+    ti.textContent = s.title;
+    const de = document.createElement("span");
+    de.className = "de";
+    de.textContent = s.desc;
+    tile.append(em, ti, de);
+    tile.addEventListener("click", () => showCalcSection(s.key));
+    home.appendChild(tile);
+  });
+})();
+$("calc-menu-back").addEventListener("click", showCalcHome);
