@@ -1413,3 +1413,14 @@ table.ref-table {
 
 .ref-block { margin-bottom: 14px; }
 .ref-block .pd-h { margin-bottom: 6px; }
+
+/* ---------- Menu group headers ---------- */
+.menu-group-h {
+  margin: 12px 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.menu-group-h:first-child { margin-top: 2px; }

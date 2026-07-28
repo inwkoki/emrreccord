@@ -470,3 +470,47 @@ export const ELYTE_CORRECTION = [
     { label: "3. Remove K", lines: ["Furosemide", "Cation-exchange resin (Kayexalate)", "Dialysis if severe / refractory"] },
   ] },
 ];
+
+// PECARN paediatric head-injury CT rule. ci-TBI = clinically important TBI
+// needing acute intervention. >=2 yr adapted from the California ACEP /
+// Choosing Wisely decision guide; <2 yr from the validated PECARN rule.
+export const PECARN = [
+  { name: "High risk → CT", tag: "≥2 yr", cls: "red",
+    need: "CT recommended if ANY (ci-TBI ~4.3%)",
+    items: [
+      "GCS < 15",
+      "Signs of basilar skull fracture",
+      "Altered mental status — agitation, somnolence, slow response, repetitive questions",
+    ],
+    dispo: "Obtain CT head" },
+  { name: "Intermediate risk", tag: "≥2 yr", cls: "amber",
+    need: "No high-risk features, but ANY of (ci-TBI ~0.8%)",
+    items: [
+      "Vomiting",
+      "Loss of consciousness",
+      "Severe headache",
+      "Severe mechanism: fall >5 ft · MVA with ejection/rollover/fatality · bike or pedestrian vs vehicle without helmet · struck by high-impact object",
+    ],
+    dispo: "Observation vs CT — shared decision-making (multiple vs isolated factors · worsening during observation · physician experience · parental preference)" },
+  { name: "Low risk", tag: "≥2 yr", cls: "green",
+    need: "None of the above (ci-TBI <0.05%)",
+    items: ["No high- or intermediate-risk features"],
+    dispo: "CT not indicated — observe" },
+  { name: "High risk → CT", tag: "<2 yr", cls: "red",
+    need: "CT recommended if ANY (ci-TBI ~4.4%)",
+    items: ["GCS < 15", "Palpable skull fracture", "Altered mental status"],
+    dispo: "Obtain CT head" },
+  { name: "Intermediate risk", tag: "<2 yr", cls: "amber",
+    need: "No high-risk features, but ANY of (ci-TBI ~0.9%)",
+    items: [
+      "Occipital, parietal or temporal scalp haematoma",
+      "Loss of consciousness >=5 seconds",
+      "Severe mechanism of injury",
+      "Not acting normally per parent",
+    ],
+    dispo: "Observation vs CT — shared decision-making" },
+  { name: "Low risk", tag: "<2 yr", cls: "green",
+    need: "None of the above (ci-TBI <0.02%)",
+    items: ["No high- or intermediate-risk features"],
+    dispo: "CT not indicated — observe" },
+];

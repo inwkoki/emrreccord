@@ -29,7 +29,7 @@ import {
 
 import { firebaseConfig } from "./firebase-config.js";
 import {
-  HA_P307, HA_P306, PRESSORS, HIGH_ALERT, CODES_ADULT, CODES_PEDS, RSI_DRUGS, TBI_GROUPS, PEDS_VITALS, PEDS_DRUGS, ELYTE_CORRECTION,
+  HA_P307, HA_P306, PRESSORS, HIGH_ALERT, CODES_ADULT, CODES_PEDS, RSI_DRUGS, TBI_GROUPS, PEDS_VITALS, PEDS_DRUGS, ELYTE_CORRECTION, PECARN,
 } from "./reference-data.js";
 
 // Register the service worker for offline support (best-effort).
@@ -2305,6 +2305,7 @@ function renderHighAlert() { renderInto("ha-cards", HIGH_ALERT); }
 
 function renderRSI() { renderInto("rsi-cards", RSI_DRUGS); }
 function renderTBI() { renderInto("tbi-cards", TBI_GROUPS); }
+function renderPecarn() { renderInto("pecarn-cards", PECARN); }
 
 // Build a titled, horizontally-scrollable reference table from {title, cols, rows}.
 function buildRefTable(spec) {
@@ -2522,18 +2523,21 @@ $("pbw-weight").addEventListener("input", recomputePBW);
 // Adding a new reference = add a pane in index.html + one entry here.
 // ---------------------------------------------------------------------------
 const SECTIONS = [
-  { key: "pressor", em: "💉", title: "Drip calculator", desc: "Inotrope / vasopressor rate ⇄ dose" },
-  { key: "highalert", em: "⚠️", title: "High-alert drugs", desc: "KKU injectable guidelines", lazy: renderHighAlert },
-  { key: "codesA", em: "🫀", title: "Adult codes", desc: "ACLS: arrest · brady · tachy · cardioversion", lazy: renderCodesA },
-  { key: "codesP", em: "👶", title: "Peds codes", desc: "PALS: arrest · brady · tachy", lazy: renderCodesP },
-  { key: "pbw", em: "⚖️", title: "Peds by weight", desc: "Resus doses & fluids from weight", lazy: recomputePBW },
-  { key: "rsi", em: "💊", title: "RSI drugs", desc: "Induction & paralytics, doses", lazy: renderRSI },
-  { key: "pdrugs", em: "🍼", title: "Peds drug doses", desc: "Common paediatric drugs (weight-based)", lazy: renderPedsDrugs },
-  { key: "elyte", em: "🧂", title: "Electrolyte correction", desc: "K / Ca / Mg / Na / glucose dosing", lazy: renderElyte },
-  { key: "tbi", em: "🧠", title: "Mild TBI", desc: "Thai CPG risk stratification", lazy: renderTBI },
-  { key: "peds", em: "📏", title: "Peds vital signs", desc: "HR · RR · SBP · ETT by age", lazy: renderPeds },
-  { key: "pedage", em: "📐", title: "Peds by age", desc: "IBW · height · tube size by age", lazy: renderPedsByAge },
+  // group: "Adult" | "Paediatric" | "General & drugs"
+  { key: "codesA", em: "🫀", title: "Adult codes", desc: "ACLS: arrest · brady · tachy · cardioversion", group: "Adult", lazy: renderCodesA },
+  { key: "tbi", em: "🧠", title: "Adult mild TBI", desc: "Thai CPG risk stratification", group: "Adult", lazy: renderTBI },
+  { key: "codesP", em: "👶", title: "Peds codes", desc: "PALS: arrest · brady · tachy", group: "Paediatric", lazy: renderCodesP },
+  { key: "pbw", em: "⚖️", title: "Peds by weight", desc: "Resus doses & fluids from weight", group: "Paediatric", lazy: recomputePBW },
+  { key: "pecarn", em: "🧠", title: "Ped head trauma", desc: "PECARN CT decision rule", group: "Paediatric", lazy: renderPecarn },
+  { key: "pdrugs", em: "🍼", title: "Peds drug doses", desc: "Common paediatric drugs (weight-based)", group: "Paediatric", lazy: renderPedsDrugs },
+  { key: "peds", em: "📏", title: "Peds vital signs", desc: "HR · RR · SBP · ETT by age", group: "Paediatric", lazy: renderPeds },
+  { key: "pedage", em: "📐", title: "Peds by age", desc: "IBW · height · tube size by age", group: "Paediatric", lazy: renderPedsByAge },
+  { key: "pressor", em: "💉", title: "Drip calculator", desc: "Inotrope / vasopressor rate ⇄ dose", group: "General & drugs" },
+  { key: "highalert", em: "⚠️", title: "High-alert drugs", desc: "KKU injectable guidelines", group: "General & drugs", lazy: renderHighAlert },
+  { key: "rsi", em: "💊", title: "RSI drugs", desc: "Induction & paralytics, doses", group: "General & drugs", lazy: renderRSI },
+  { key: "elyte", em: "🧂", title: "Electrolyte correction", desc: "K / Ca / Mg / Na / glucose dosing", group: "General & drugs", lazy: renderElyte },
 ];
+const SECTION_GROUPS = ["Adult", "Paediatric", "General & drugs"];
 
 function showCalcSection(key) {
   const sec = SECTIONS.find((s) => s.key === key);
@@ -2571,7 +2575,8 @@ function buildSearchIndex() {
   CODES_PEDS.forEach((d) => add(d.name, "peds PALS " + secText(d.sections), "codesP", "Peds codes (PALS)"));
   RSI_DRUGS.forEach((d) => add(d.name, d.tag + " " + rowsText(d.rows), "rsi", "RSI drug"));
   PEDS_DRUGS.forEach((c) => c.drugs.forEach((dr) => add(dr.n, c.cat + " " + dr.d, "pdrugs", "Peds drug — " + c.cat)));
-  TBI_GROUPS.forEach((g) => add(g.name, g.need + " " + (g.items || []).join(" "), "tbi", "Mild TBI"));
+  TBI_GROUPS.forEach((g) => add(g.name, g.need + " " + (g.items || []).join(" "), "tbi", "Adult mild TBI"));
+  add("Ped head trauma (PECARN)", "PECARN paediatric head injury CT decision rule ci-TBI basilar skull fracture GCS mechanism scalp haematoma", "pecarn", "Ped head trauma (PECARN)");
   ELYTE_CORRECTION.forEach((d) => add(d.name, d.tag + " " + rowsText(d.rows) + " " + secText(d.sections), "elyte", "Electrolyte correction"));
   add("Paediatric vital signs", PEDS_VITALS.tables.map((t) => t.rows.map((r) => r.join(" ")).join(" ")).join(" "), "peds", "Peds vital signs");
   add("Weight & tube size by age", "IBW ideal body weight height ETT endotracheal tube cuffed uncuffed depth by age", "pedage", "Peds by age");
@@ -2617,25 +2622,36 @@ function runSearch(q) {
 }
 $("calc-search").addEventListener("input", (e) => runSearch(e.target.value));
 
-// Build the menu tiles once.
+// Build the menu tiles once, grouped (Adult / Paediatric / General & drugs).
 (function buildCalcMenu() {
   const home = $("calc-home");
-  SECTIONS.forEach((s) => {
-    const tile = document.createElement("button");
-    tile.type = "button";
-    tile.className = "calc-tile";
-    const em = document.createElement("span");
-    em.className = "em";
-    em.textContent = s.em;
-    const ti = document.createElement("span");
-    ti.className = "ti";
-    ti.textContent = s.title;
-    const de = document.createElement("span");
-    de.className = "de";
-    de.textContent = s.desc;
-    tile.append(em, ti, de);
-    tile.addEventListener("click", () => showCalcSection(s.key));
-    home.appendChild(tile);
+  SECTION_GROUPS.forEach((group) => {
+    const secs = SECTIONS.filter((s) => s.group === group);
+    if (!secs.length) return;
+    const h = document.createElement("h4");
+    h.className = "menu-group-h";
+    h.textContent = group;
+    home.appendChild(h);
+    const grid = document.createElement("div");
+    grid.className = "calc-menu";
+    secs.forEach((s) => {
+      const tile = document.createElement("button");
+      tile.type = "button";
+      tile.className = "calc-tile";
+      const em = document.createElement("span");
+      em.className = "em";
+      em.textContent = s.em;
+      const ti = document.createElement("span");
+      ti.className = "ti";
+      ti.textContent = s.title;
+      const de = document.createElement("span");
+      de.className = "de";
+      de.textContent = s.desc;
+      tile.append(em, ti, de);
+      tile.addEventListener("click", () => showCalcSection(s.key));
+      grid.appendChild(tile);
+    });
+    home.appendChild(grid);
   });
 })();
 $("calc-menu-back").addEventListener("click", showCalcHome);

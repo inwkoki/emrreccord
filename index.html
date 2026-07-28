@@ -605,7 +605,7 @@
         <!-- Search + section menu (table of contents) — built in app.js -->
         <input id="calc-search" type="search" class="calc-search" placeholder="🔍 Search reference — drug, dose, protocol…" autocomplete="off" />
         <div id="calc-results" class="calc-results hidden"></div>
-        <div id="calc-home" class="calc-menu"></div>
+        <div id="calc-home"></div>
         <!-- Back bar shown inside a section -->
         <div id="calc-secbar" class="calc-secbar hidden">
           <button type="button" class="ghost-btn" id="calc-menu-back">← Menu</button>
@@ -753,6 +753,16 @@
           <div id="pd-filter" class="calc-tabs"></div>
           <div id="pd-list"></div>
           <p class="disclaimer">⚠️ Reference only — confirm every dose, maximum and preparation against a current source and the individual child before prescribing.</p>
+        </div>
+
+        <!-- ===== Paediatric head trauma — PECARN ===== -->
+        <div id="calc-pecarn" class="calc-pane hidden">
+          <p class="hint">
+            Paediatric head trauma — <b>PECARN</b> CT decision rule. Assign the highest risk tier that
+            applies, for each age group. <b>ci-TBI</b> = clinically important TBI needing acute intervention.
+          </p>
+          <div id="pecarn-cards"></div>
+          <p class="disclaimer">⚠️ Decision guide only — combine with clinical judgement, serial exam and local protocol. ≥2 yr adapted from California ACEP / Choosing Wisely; based on validated PECARN rules.</p>
         </div>
 
         <!-- ===== Mild TBI risk stratification ===== -->
