@@ -2,7 +2,7 @@
   "rules": {
     "users": {
       "$uid": {
-        ".read": "auth != null",
+        ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid",
         "username":    { ".validate": "newData.isString() && newData.val().length <= 20" },
         "displayName": { ".validate": "newData.isString() && newData.val().length <= 40" },
@@ -33,11 +33,14 @@
       }
     },
     "encounters": {
-      // Any signed-in staff device (anonymous auth) can read/write the board.
+      // Shared board: any signed-in staff device can read every encounter and
+      // create/update any encounter (handoff-friendly). Writes live on $id so
+      // that deletes (newData does not exist) are denied — the intended way to
+      // clear a record is to mark it "recorded", never to delete it.
       ".read": "auth != null",
-      ".write": "auth != null",
       ".indexOn": ["updatedAt"],
       "$id": {
+        ".write": "auth != null && newData.exists()",
         ".validate": "newData.hasChildren(['bed', 'updatedAt', 'by', 'status'])",
         "bed":       { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40" },
         "complaint": { ".validate": "newData.isString() && newData.val().length <= 5000" },
@@ -45,6 +48,8 @@
         "exam":      { ".validate": "newData.isString() && newData.val().length <= 5000" },
         "bedside":   { ".validate": "newData.isString() && newData.val().length <= 5000" },
         "by":        { ".validate": "newData.isString() && newData.val().length <= 40" },
+        // The creator/editor stamp must be the writer's own uid — no impersonation.
+        "byUid":     { ".validate": "newData.val() === auth.uid" },
         "status":    { ".validate": "newData.isString() && (newData.val() === 'active' || newData.val() === 'recorded')" },
         "createdAt": { ".validate": "newData.val() <= now" },
         "updatedAt": { ".validate": "newData.val() <= now" },

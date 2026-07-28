@@ -4,8 +4,9 @@ Type patient notes at the **bedside on your phone** → they pop up **live at th
 station computer**, formatted and ready to paste into the EMR. Built for a busy
 ED where retyping at a workstation wastes time.
 
-Built with **Firebase Realtime Database** + **Anonymous Auth**, hosted as a
-static site on **[Render.com](https://render.com)**. No build step, no server.
+Built with **Firebase Realtime Database** + **Email/Password Auth** (username +
+PIN), hosted as a static site on **[Render.com](https://render.com)**. No build
+step, no server.
 
 > ⚠️ **Prototype — not a certified / HIPAA / PDPA-compliant EMR.** Do not store
 > real identifiable patient data until it is properly secured, access-controlled,
@@ -57,7 +58,7 @@ static site on **[Render.com](https://render.com)**. No build step, no server.
 | -------- | ---------------------------------------- |
 | Frontend | Vanilla HTML/CSS/JS (ES modules)         |
 | Realtime | Firebase Realtime Database (modular SDK) |
-| Auth     | Firebase Anonymous Auth                  |
+| Auth     | Firebase Email/Password (username + PIN) |
 | Hosting  | Render.com static site                   |
 
 ---
@@ -125,7 +126,12 @@ render.yaml           Render static-site blueprint
 
 - Firebase web API keys are identifiers, not secrets — safe to commit. Real
   protection comes from the database rules.
-- The current rules allow any anonymous device to read/write the shared board —
-  fine for a prototype/demo, **not** for real PHI. For production you would add
-  proper (non-anonymous) staff authentication, per-user/department scoping,
-  audit logging, encryption, and a signed BAA/data-processing agreement.
+- The current rules let any signed-in staff device read/write the shared
+  encounters board (handoff-friendly), while your own profile, templates and
+  chips are readable only by you. Encounters can be created/updated but **not
+  deleted** — clear a record by marking it "recorded" instead — and the `byUid`
+  stamp is bound to the writer so a note can't be forged under another account.
+  This is fine for a prototype/demo, **not** for real PHI. For production you
+  would add stronger staff authentication (PINs are convenience-grade),
+  per-user/department scoping, audit logging, encryption, and a signed
+  BAA/data-processing agreement.

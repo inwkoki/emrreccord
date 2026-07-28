@@ -1,4 +1,5 @@
-// ED QuickCapture — Firebase Realtime Database + Anonymous Auth
+// ED QuickCapture — Firebase Realtime Database + Email/Password Auth
+// (username + PIN mapped to a synthetic email; see emailFor/passwordFor below).
 // Bedside phone entry syncs live to the station computer for EMR recording.
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -97,7 +98,6 @@ const dNote = $("d-note");
 const copyBtn = $("copy-btn");
 const recordBtn = $("record-btn");
 const detailStatus = $("detail-status");
-const meStation = $("me-station");
 const dotStation = $("dot-station");
 const meStationEl = $("me-station");
 

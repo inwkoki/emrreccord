@@ -19,3 +19,8 @@ services:
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
+      # Files are unhashed and auto-deploy on every push, so force the browser
+      # to revalidate rather than serve a stale build after a deploy.
+      - path: /*
+        name: Cache-Control
+        value: no-cache
