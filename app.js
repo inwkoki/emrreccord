@@ -2185,61 +2185,14 @@ $("calc-back").addEventListener("click", () => {
 // linked PDF; verify against the current local protocol before use.
 // ---------------------------------------------------------------------------
 
-function renderHighAlert() {
-  const box = $("ha-cards");
-  if (!box || box.childElementCount) return; // build once
-  HIGH_ALERT.forEach((d) => {
-    const card = document.createElement("div");
-    card.className = "ha-card";
-
-    const head = document.createElement("div");
-    head.className = "ha-head";
-    const nm = document.createElement("span");
-    nm.className = "ha-name";
-    nm.textContent = d.name;
-    const st = document.createElement("span");
-    st.className = "ha-strength";
-    st.textContent = d.strength;
-    const tg = document.createElement("span");
-    tg.className = "ha-tag";
-    tg.textContent = d.tag;
-    head.append(nm, st, tg);
-    card.appendChild(head);
-
-    d.rows.forEach(([k, v, warn]) => {
-      const row = document.createElement("div");
-      row.className = "ha-row" + (warn ? " warn" : "");
-      const kk = document.createElement("span");
-      kk.className = "k";
-      kk.textContent = k;
-      const vv = document.createElement("span");
-      vv.className = "v";
-      vv.textContent = v;
-      row.append(kk, vv);
-      card.appendChild(row);
-    });
-
-    const a = document.createElement("a");
-    a.className = "ha-src";
-    a.href = d.url;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    a.textContent = "KKU guideline ↗";
-    card.appendChild(a);
-
-    box.appendChild(card);
-  });
-}
-
 // ---------------------------------------------------------------------------
-// RSI drugs, Mild TBI risk stratification, Paediatric vitals — reference cards
-// General ED references (not drug-specific KKU docs). Verify locally.
+// One card renderer for every card-shaped reference (high-alert, RSI, ACLS,
+// PALS, TBI). Renders whichever fields the data provides, in a fixed order:
+//   head (name · strength · tag) → need → items[] → rows[] → sections[]
+//   → dispo → source link
+// Adding a new card-based reference needs data only — no new render code.
 // ---------------------------------------------------------------------------
-
-
-
-// Shared reference-card builder (used by high-alert + RSI).
-function buildRefCard(d) {
+function renderCard(d) {
   const card = document.createElement("div");
   card.className = "ha-card" + (d.cls ? " " + d.cls : "");
 
@@ -2263,6 +2216,22 @@ function buildRefCard(d) {
   }
   card.appendChild(head);
 
+  if (d.need) {
+    const p = document.createElement("p");
+    p.className = "ha-need";
+    p.textContent = d.need;
+    card.appendChild(p);
+  }
+  if (d.items) {
+    const ul = document.createElement("ul");
+    ul.className = "ha-list";
+    d.items.forEach((it) => {
+      const li = document.createElement("li");
+      li.textContent = it;
+      ul.appendChild(li);
+    });
+    card.appendChild(ul);
+  }
   (d.rows || []).forEach(([k, v, warn]) => {
     const row = document.createElement("div");
     row.className = "ha-row" + (warn ? " warn" : "");
@@ -2275,7 +2244,30 @@ function buildRefCard(d) {
     row.append(kk, vv);
     card.appendChild(row);
   });
-
+  (d.sections || []).forEach((sec) => {
+    const lb = document.createElement("p");
+    lb.className = "ha-need";
+    lb.textContent = sec.label;
+    card.appendChild(lb);
+    const ul = document.createElement("ul");
+    ul.className = "ha-list";
+    sec.lines.forEach((t) => {
+      const li = document.createElement("li");
+      li.textContent = t;
+      ul.appendChild(li);
+    });
+    card.appendChild(ul);
+  });
+  if (d.dispo) {
+    const dp = document.createElement("div");
+    dp.className = "ha-dispo";
+    const ar = document.createElement("span");
+    ar.className = "arrow";
+    ar.textContent = "→ ";
+    dp.appendChild(ar);
+    dp.appendChild(document.createTextNode(d.dispo));
+    card.appendChild(dp);
+  }
   if (d.url) {
     const a = document.createElement("a");
     a.className = "ha-src";
@@ -2288,52 +2280,24 @@ function buildRefCard(d) {
   return card;
 }
 
-function renderRSI() {
-  const box = $("rsi-cards");
+// Render an array of card specs into a container, once.
+function renderInto(boxId, data) {
+  const box = $(boxId);
   if (!box || box.childElementCount) return;
-  RSI_DRUGS.forEach((d) => box.appendChild(buildRefCard(d)));
+  data.forEach((d) => box.appendChild(renderCard(d)));
 }
 
-function renderTBI() {
-  const box = $("tbi-cards");
-  if (!box || box.childElementCount) return;
-  TBI_GROUPS.forEach((g) => {
-    const card = document.createElement("div");
-    card.className = "ha-card " + g.cls;
-    const head = document.createElement("div");
-    head.className = "ha-head";
-    const nm = document.createElement("span");
-    nm.className = "ha-name";
-    nm.textContent = g.name;
-    head.appendChild(nm);
-    card.appendChild(head);
+function renderHighAlert() { renderInto("ha-cards", HIGH_ALERT); }
 
-    const need = document.createElement("p");
-    need.className = "ha-need";
-    need.textContent = g.need;
-    card.appendChild(need);
+// ---------------------------------------------------------------------------
+// RSI drugs, Mild TBI risk stratification, Paediatric vitals — reference cards
+// General ED references (not drug-specific KKU docs). Verify locally.
+// ---------------------------------------------------------------------------
 
-    const ul = document.createElement("ul");
-    ul.className = "ha-list";
-    g.items.forEach((it) => {
-      const li = document.createElement("li");
-      li.textContent = it;
-      ul.appendChild(li);
-    });
-    card.appendChild(ul);
 
-    const dp = document.createElement("div");
-    dp.className = "ha-dispo";
-    const ar = document.createElement("span");
-    ar.className = "arrow";
-    ar.textContent = "→ ";
-    dp.appendChild(ar);
-    dp.appendChild(document.createTextNode(g.dispo));
-    card.appendChild(dp);
 
-    box.appendChild(card);
-  });
-}
+function renderRSI() { renderInto("rsi-cards", RSI_DRUGS); }
+function renderTBI() { renderInto("tbi-cards", TBI_GROUPS); }
 
 function renderPeds() {
   const box = $("peds-table");
@@ -2380,47 +2344,8 @@ function renderPeds() {
 // ---------------------------------------------------------------------------
 
 
-// Card with labelled bullet sections (used by ACLS / PALS).
-function buildCodeCard(d) {
-  const card = document.createElement("div");
-  card.className = "ha-card" + (d.cls ? " " + d.cls : "");
-  const head = document.createElement("div");
-  head.className = "ha-head";
-  const nm = document.createElement("span");
-  nm.className = "ha-name";
-  nm.textContent = d.name;
-  head.appendChild(nm);
-  if (d.tag) {
-    const tg = document.createElement("span");
-    tg.className = "ha-tag";
-    tg.textContent = d.tag;
-    head.appendChild(tg);
-  }
-  card.appendChild(head);
-  d.sections.forEach((sec) => {
-    const lb = document.createElement("p");
-    lb.className = "ha-need";
-    lb.textContent = sec.label;
-    card.appendChild(lb);
-    const ul = document.createElement("ul");
-    ul.className = "ha-list";
-    sec.lines.forEach((t) => {
-      const li = document.createElement("li");
-      li.textContent = t;
-      ul.appendChild(li);
-    });
-    card.appendChild(ul);
-  });
-  return card;
-}
-
-function renderCodes(boxId, data) {
-  const box = $(boxId);
-  if (!box || box.childElementCount) return;
-  data.forEach((d) => box.appendChild(buildCodeCard(d)));
-}
-function renderCodesA() { renderCodes("codesA-cards", CODES_ADULT); }
-function renderCodesP() { renderCodes("codesP-cards", CODES_PEDS); }
+function renderCodesA() { renderInto("codesA-cards", CODES_ADULT); }
+function renderCodesP() { renderInto("codesP-cards", CODES_PEDS); }
 
 // ---------------------------------------------------------------------------
 // COMMON PAEDIATRIC DRUG DOSES
@@ -2495,6 +2420,8 @@ const SECTIONS = [
 function showCalcSection(key) {
   const sec = SECTIONS.find((s) => s.key === key);
   if (!sec) return;
+  $("calc-search").classList.add("hidden");
+  $("calc-results").classList.add("hidden");
   $("calc-home").classList.add("hidden");
   $("calc-secbar").classList.remove("hidden");
   $("calc-sec-title").textContent = sec.em + " " + sec.title;
@@ -2506,8 +2433,68 @@ function showCalcSection(key) {
 function showCalcHome() {
   $("calc-secbar").classList.add("hidden");
   SECTIONS.forEach((s) => $("calc-" + s.key).classList.add("hidden"));
+  $("calc-search").value = "";
+  $("calc-search").classList.remove("hidden");
+  $("calc-results").classList.add("hidden");
   $("calc-home").classList.remove("hidden");
 }
+
+// --- Reference search: index all datasets, jump to the owning section --------
+let searchIndex = null;
+function buildSearchIndex() {
+  const idx = [];
+  const add = (label, hay, section, sub) =>
+    idx.push({ label, section, sub, hay: (label + " " + (hay || "")).toLowerCase() });
+  const rowsText = (rows) => (rows || []).map((r) => r.join(" ")).join(" ");
+  const secText = (secs) => (secs || []).map((s) => s.label + " " + s.lines.join(" ")).join(" ");
+  PRESSORS.forEach((d) => add(d.name, d.note, "pressor", "Drip calculator"));
+  HIGH_ALERT.forEach((d) => add(d.name, d.strength + " " + d.tag + " " + rowsText(d.rows), "highalert", "High-alert drug"));
+  CODES_ADULT.forEach((d) => add(d.name, "adult ACLS " + secText(d.sections), "codesA", "Adult codes (ACLS)"));
+  CODES_PEDS.forEach((d) => add(d.name, "peds PALS " + secText(d.sections), "codesP", "Peds codes (PALS)"));
+  RSI_DRUGS.forEach((d) => add(d.name, d.tag + " " + rowsText(d.rows), "rsi", "RSI drug"));
+  PEDS_DRUGS.forEach((c) => c.drugs.forEach((dr) => add(dr.n, c.cat + " " + dr.d, "pdrugs", "Peds drug — " + c.cat)));
+  TBI_GROUPS.forEach((g) => add(g.name, g.need + " " + (g.items || []).join(" "), "tbi", "Mild TBI"));
+  add("Paediatric vital signs", PEDS_VITALS.rows.map((r) => r.join(" ")).join(" "), "peds", "Peds vital signs");
+  return idx;
+}
+
+function runSearch(q) {
+  const query = q.trim().toLowerCase();
+  const results = $("calc-results");
+  if (!query) {
+    results.classList.add("hidden");
+    results.innerHTML = "";
+    $("calc-home").classList.remove("hidden");
+    return;
+  }
+  if (!searchIndex) searchIndex = buildSearchIndex();
+  $("calc-home").classList.add("hidden");
+  results.innerHTML = "";
+  const matches = searchIndex.filter((e) => e.hay.includes(query)).slice(0, 40);
+  if (!matches.length) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = "No matches for “" + q.trim() + "”.";
+    results.appendChild(p);
+  } else {
+    matches.forEach((m) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "calc-result";
+      const lab = document.createElement("span");
+      lab.className = "cr-label";
+      lab.textContent = m.label;
+      const sub = document.createElement("span");
+      sub.className = "cr-sub";
+      sub.textContent = m.sub;
+      btn.append(lab, sub);
+      btn.addEventListener("click", () => showCalcSection(m.section));
+      results.appendChild(btn);
+    });
+  }
+  results.classList.remove("hidden");
+}
+$("calc-search").addEventListener("input", (e) => runSearch(e.target.value));
 
 // Build the menu tiles once.
 (function buildCalcMenu() {

@@ -1370,3 +1370,39 @@ table.ref-table {
 .pd-name { font-weight: 700; font-size: 13.5px; }
 .pd-dose { font-size: 13px; line-height: 1.4; }
 .pd-prep { font-size: 12px; color: var(--muted); line-height: 1.35; }
+
+/* ---------- Reference search ---------- */
+.calc-search {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  background: var(--panel);
+  color: var(--text);
+}
+.calc-search:focus { outline: none; border-color: var(--primary); }
+.calc-results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.calc-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+}
+.calc-result:hover { border-color: var(--primary); }
+.cr-label { font-weight: 700; font-size: 13.5px; }
+.cr-sub { font-size: 12px; color: var(--muted); }
