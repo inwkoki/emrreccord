@@ -598,7 +598,8 @@
 
       <main class="bedside-body">
         <div class="calc-tabs" id="calc-tabs">
-          <button type="button" class="chip active" data-calc-tab="pressor">💉 Inotrope / Vasopressor</button>
+          <button type="button" class="chip active" data-calc-tab="pressor">💉 Drip calculator</button>
+          <button type="button" class="chip" data-calc-tab="highalert">⚠️ High-alert reference</button>
         </div>
 
         <!-- ===== Inotrope / vasopressor drip calculator ===== -->
@@ -665,6 +666,16 @@
             This is a calculation aid, not a prescription — concentrations and dose ranges vary by
             preparation and patient.
           </p>
+        </div>
+
+        <!-- ===== High-alert drug reference ===== -->
+        <div id="calc-highalert" class="calc-pane hidden">
+          <p class="hint">
+            High-alert injectable drug guidance from the <b>Faculty of Medicine, Khon Kaen University</b>
+            (Srinagarind Hospital). Tap a card's link to open the source guideline. Always confirm against
+            your own unit's current protocol.
+          </p>
+          <div id="ha-cards"></div>
         </div>
       </main>
     </section>

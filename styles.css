@@ -1194,3 +1194,72 @@ button:disabled {
   font-size: 18px;
   color: var(--muted);
 }
+
+/* ---------- High-alert drug reference cards ---------- */
+#ha-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+.ha-card {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--danger);
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 12px 14px;
+}
+.ha-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-bottom: 8px;
+}
+.ha-name {
+  font-weight: 700;
+  font-size: 15px;
+}
+.ha-strength {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.ha-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary-dark);
+  background: rgba(13, 148, 136, 0.1);
+  border-radius: 999px;
+  padding: 2px 9px;
+  margin-left: auto;
+}
+.ha-row {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+  line-height: 1.4;
+  border-top: 1px dashed var(--line);
+}
+.ha-row:first-of-type {
+  border-top: none;
+}
+.ha-row .k {
+  color: var(--muted);
+  font-weight: 600;
+}
+.ha-row.warn .v {
+  color: var(--danger);
+  font-weight: 600;
+}
+.ha-src {
+  display: inline-block;
+  margin-top: 9px;
+  font-size: 12.5px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.ha-src:hover {
+  text-decoration: underline;
+}

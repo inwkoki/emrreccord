@@ -1950,43 +1950,39 @@ setInterval(() => {
 const PRESSORS = [
   {
     key: "norepi", name: "Norepinephrine (Levophed)", massUnit: "mcg", weightBased: true,
-    range: { lo: 0.01, hi: 3, unit: "mcg/kg/min" },
-    note: "Start 0.05 mcg/kg/min, titrate to MAP >= 65. Doses expressed as the salt.",
+    range: { lo: 0.01, hi: 2, unit: "mcg/kg/min" },
+    note: "KKU: max ~2 mcg/kg/min (refractory shock). Mix in D5W (NOT NSS). Peripheral <=16 mcg/mL; central up to 64 mcg/mL. High dose >0.2 -> NPO + PPI.",
     preps: [
-      { label: "4 mg / 250 mL  (16 mcg/mL)", mg: 4, ml: 250 },
-      { label: "4 mg / 50 mL  (80 mcg/mL, central)", mg: 4, ml: 50 },
-      { label: "8 mg / 250 mL  (32 mcg/mL)", mg: 8, ml: 250 },
-      { label: "16 mg / 250 mL  (64 mcg/mL)", mg: 16, ml: 250 },
+      { label: "4 mg / 250 mL  (16 mcg/mL, peripheral)", mg: 4, ml: 250 },
+      { label: "8 mg / 125 mL  (64 mcg/mL, central)", mg: 8, ml: 125 },
     ],
   },
   {
     key: "epi", name: "Adrenaline / Epinephrine", massUnit: "mcg", weightBased: true,
-    range: { lo: 0.01, hi: 0.5, unit: "mcg/kg/min" },
-    note: "Infusion 0.01-0.5 mcg/kg/min; start ~0.05 and titrate.",
+    range: { lo: 0.01, hi: 2, unit: "mcg/kg/min" },
+    note: "KKU: infusion 0.01-2 mcg/kg/min (refractory shock) via pump. Std 10 mg / 100 mL = 100 mcg/mL (1:10,000) in D5W or NSS.",
     preps: [
+      { label: "10 mg / 100 mL  (100 mcg/mL, 1:10,000)", mg: 10, ml: 100 },
       { label: "4 mg / 250 mL  (16 mcg/mL)", mg: 4, ml: 250 },
-      { label: "1 mg / 250 mL  (4 mcg/mL)", mg: 1, ml: 250 },
-      { label: "4 mg / 50 mL  (80 mcg/mL, central)", mg: 4, ml: 50 },
     ],
   },
   {
     key: "dopamine", name: "Dopamine", massUnit: "mcg", weightBased: true,
     range: { lo: 2, hi: 20, unit: "mcg/kg/min" },
-    note: "2-5 dopaminergic · 5-10 beta/inotrope · 10-20 mcg/kg/min alpha/pressor.",
+    note: "KKU: max 20 mcg/kg/min via pump. 2-5 renal · 5-10 inotrope · 10-20 pressor. Std 1 or 2 mg/mL in D5W or NSS.",
     preps: [
-      { label: "200 mg / 250 mL  (800 mcg/mL)", mg: 200, ml: 250 },
-      { label: "400 mg / 250 mL  (1600 mcg/mL)", mg: 400, ml: 250 },
-      { label: "250 mg / 250 mL  (1000 mcg/mL)", mg: 250, ml: 250 },
+      { label: "1 mg/mL  (e.g. 250 mg / 250 mL)", mg: 250, ml: 250 },
+      { label: "2 mg/mL  (e.g. 500 mg / 250 mL)", mg: 500, ml: 250 },
     ],
   },
   {
     key: "dobutamine", name: "Dobutamine", massUnit: "mcg", weightBased: true,
     range: { lo: 2, hi: 20, unit: "mcg/kg/min" },
-    note: "Inotrope 2-20 mcg/kg/min; usual 5-15.",
+    note: "KKU: max 40 mcg/kg/min (usual 2-20) via pump. Std 1-4 mg/mL (max conc 5 mg/mL) in D5W or NSS.",
     preps: [
-      { label: "250 mg / 250 mL  (1000 mcg/mL)", mg: 250, ml: 250 },
-      { label: "500 mg / 250 mL  (2000 mcg/mL)", mg: 500, ml: 250 },
-      { label: "250 mg / 50 mL  (5000 mcg/mL)", mg: 250, ml: 50 },
+      { label: "1 mg/mL  (e.g. 250 mg / 250 mL)", mg: 250, ml: 250 },
+      { label: "2 mg/mL  (e.g. 500 mg / 250 mL)", mg: 500, ml: 250 },
+      { label: "4 mg/mL  (e.g. 1000 mg / 250 mL)", mg: 1000, ml: 250 },
     ],
   },
   {
@@ -2213,4 +2209,170 @@ document.querySelectorAll("[data-open-calc]").forEach((btn) => {
 $("calc-back").addEventListener("click", () => {
   role = calcReturn;
   showRole();
+});
+
+// ---------------------------------------------------------------------------
+// HIGH-ALERT DRUG REFERENCE
+// Source: Faculty of Medicine, Khon Kaen University (Srinagarind Hospital)
+// high-alert injectable drug guidelines. Each row is transcribed from the
+// linked PDF; verify against the current local protocol before use.
+// ---------------------------------------------------------------------------
+const HA_P307 = "https://pharm.md.kku.ac.th/file/post/307/attachment/";
+const HA_P306 = "https://pharm.md.kku.ac.th/file/post/306/attachment/";
+const HIGH_ALERT = [
+  {
+    name: "Norepinephrine (Levophed)", tag: "Vasopressor", strength: "4 mg / 4 mL",
+    url: HA_P307 + "Norepinephine%20injection.pdf",
+    rows: [
+      ["Std conc", "Peripheral <=16 mcg/mL (4 mg/250 mL); central up to 64 mcg/mL (8 mg/125 mL)"],
+      ["Dose", "0.01-2 mcg/kg/min; usual max 2 (refractory shock)"],
+      ["Diluent", "D5W ONLY — do NOT use NSS. Protect from light; discard if pink/brown/yellow", true],
+      ["Incompat.", "Alkaline solutions (NaHCO3, whole blood)"],
+      ["Caution", "High dose >0.2 mcg/kg/min: NPO + PPI, watch bowel ischaemia. Prefer central line; watch extravasation"],
+      ["Monitor", "HR q15min x4 then q4h — report HR <60 or >100, BP <90/60 or >140/90; IV site q4h"],
+    ],
+  },
+  {
+    name: "Adrenaline / Epinephrine", tag: "Vasopressor", strength: "1 mg/mL (1:1,000)",
+    url: HA_P306 + "Adrenaline%20injection.pdf",
+    rows: [
+      ["Routes", "IM/SC 1:1,000; IV bolus dilute to 1:10,000 (1 amp + 9 mL) for arrest / anaphylaxis; IV infusion via pump"],
+      ["Infusion", "10 mg / 100 mL = 100 mcg/mL (1:10,000); dose 0.01-2 mcg/kg/min"],
+      ["Diluent", "D5W or NSS; stable 24 h; protect from light"],
+      ["Incompat.", "Aminophylline, NaHCO3, alkali. Compatible: dopamine, dobutamine"],
+      ["Monitor", "HR (anaphylaxis q5-10min x30min; drip q1h) — report HR <70 or >120, BP <90/60 or >140/90"],
+    ],
+  },
+  {
+    name: "Dopamine", tag: "Inotrope / pressor", strength: "250 mg / 10 mL",
+    url: HA_P306 + "Dopamine%20injection.pdf",
+    rows: [
+      ["Std conc", "1 mg/mL or 2 mg/mL in D5W or NSS; infusion pump"],
+      ["Dose", "Max 20 mcg/kg/min — 2-5 renal · 5-10 inotrope · 10-20 pressor"],
+      ["Caution", "Titrate slowly (abrupt BP shifts). Use within 24 h; discard if dark/pink. No alkaline (NaHCO3)"],
+      ["Monitor", "HR q15min x4 then q1h — report HR <70 or >120, BP <90/60 or >140/90, urine <25 mL/hr"],
+    ],
+  },
+  {
+    name: "Dobutamine", tag: "Inotrope", strength: "250 mg / 20 mL",
+    url: HA_P306 + "Dobutamine%20injection.pdf",
+    rows: [
+      ["Std conc", "1-4 mg/mL (max conc 5 mg/mL) in D5W or NSS; infusion pump only"],
+      ["Dose", "Max 40 mcg/kg/min (usual 2-20)"],
+      ["Caution", "Titrate slowly. Use within 24 h; pink tint OK, discard if dark brown. No alkaline (NaHCO3)"],
+      ["Monitor", "HR q15min x4 then q1h — report HR <70 or >120, BP <90/60 or >140/90, urine <25 mL/hr"],
+    ],
+  },
+  {
+    name: "Amiodarone", tag: "Antiarrhythmic", strength: "150 mg / 3 mL (tab 200 mg)",
+    url: HA_P306 + "Amiodarone.pdf",
+    rows: [
+      ["IV push", "150 mg over >=10 min (<=30 mg/min); in arrest may push over >3 min"],
+      ["Infusion", "D5W ONLY — do NOT use NSS. Peripheral <=2 mg/mL over 1-2 h; central <=6 mg/mL", true],
+      ["Max", "2.2 g/day. Long half-life 7-50 days; many interactions (digoxin, warfarin, phenytoin, quinolones, fentanyl)"],
+      ["Monitor", "HR before + q15min x3 — report HR <70 or >120, BP <90/60; ECG (AV block, brady, long QT); IV site q1h x6h"],
+    ],
+  },
+  {
+    name: "Ketamine", tag: "Anaesthetic / analgesic", strength: "50 mg/mL (10 mL)",
+    url: HA_P307 + "Ketamine%20injection.pdf",
+    rows: [
+      ["IV", "Dilute (NSS/SWFI/D5W), final <=2 mg/mL; initial 1-4.5 mg/kg; rate <=0.5 mg/kg/min or over >60 s"],
+      ["Maint.", "IV drip 0.1-0.5 mg/min. IM 9-13 mg/kg"],
+      ["Caution", "Rapid IV -> respiratory depression. Incompatible with barbiturates / diazepam (space 60 s). Avoid in pregnancy", true],
+      ["Monitor", "BP q5min x5 then q4h — report BP <90/60 or >160/100, RR <12, HR <60, SpO2 <94%, sedation score >=2"],
+    ],
+  },
+  {
+    name: "Magnesium sulfate", tag: "Electrolyte", strength: "10% /10 mL · 50% /2 mL (1 g = 8 mEq)",
+    url: HA_P307 + "Magnesium%20sulphate%20injection.pdf",
+    rows: [
+      ["Push", "10%: slow IV push <1 g/min. 50%: IV drip ONLY — never push", true],
+      ["Rate/Max", "IV drip <150 mg/min. Max 2 g/hr (eclampsia up to 4 g/hr)"],
+      ["Std conc", "2 g/100 mL (max 20%) in D5W or NSS via pump. Do NOT refrigerate (precipitates)"],
+      ["Caution", "CKD 4-5 / AKI: reduce + monitor Mg & ECG. Contraindicated in ESRD on dialysis"],
+      ["Monitor", "HR/BP/DTR/urine q4h — target Mg 1.6-2.2 mg/dL, report absent DTR, urine <0.5 mL/kg/hr"],
+    ],
+  },
+  {
+    name: "Potassium chloride", tag: "Electrolyte", strength: "20 mEq / 10 mL (2 mEq/mL)",
+    url: HA_P307 + "Potassium%20chloride%20injection.pdf",
+    rows: [
+      ["Never push", "IV infusion pump ONLY — NEVER IV push. Never add to a hanging bag; invert to mix x10", true],
+      ["Peripheral", "Conc <=80 mEq/L, rate <10 mEq/hr"],
+      ["Central", "Conc <=200 mEq/L (20 mEq/100 mL), rate <20 mEq/hr"],
+      ["Diluent", "NSS preferred (dextrose can worsen hypokalaemia)"],
+      ["Caution", ">=10 mEq/hr needs sub-ICU/ICU with continuous ECG + K. Caution CKD5 / AKI / urine <25 mL/hr"],
+      ["Monitor", "HR q4h (q1h if >10 mEq/hr) — K 3.5-5.0 mEq/L; ECG for hyperkalaemia"],
+    ],
+  },
+  {
+    name: "Calcium gluconate", tag: "Electrolyte", strength: "1 g / 10 mL (1 g = 90 mg Ca / 4.5 mEq)",
+    url: HA_P306 + "Calcium%20gluconate%20injection.pdf",
+    rows: [
+      ["Emergency", "hyperK / hypoCa: undiluted slowly over >5-10 min (no push) or dilute 10-50 mg/mL (1 amp in D5W 50 mL)"],
+      ["Infusion", "Dilute <10 mg/mL (1 amp in >=100 mL). Rate <=200 mg/min (fast -> paraesthesia / hypotension)", true],
+      ["Incompat.", "Carbonate, bicarbonate, phosphate, sulfate (incl. MgSO4) -> precipitate"],
+      ["Monitor", "HR/BP q15min x4 then q4h; ECG on slow push; report Ca >10.5, phosphate >4.5 mg/dL"],
+    ],
+  },
+];
+
+function renderHighAlert() {
+  const box = $("ha-cards");
+  if (!box || box.childElementCount) return; // build once
+  HIGH_ALERT.forEach((d) => {
+    const card = document.createElement("div");
+    card.className = "ha-card";
+
+    const head = document.createElement("div");
+    head.className = "ha-head";
+    const nm = document.createElement("span");
+    nm.className = "ha-name";
+    nm.textContent = d.name;
+    const st = document.createElement("span");
+    st.className = "ha-strength";
+    st.textContent = d.strength;
+    const tg = document.createElement("span");
+    tg.className = "ha-tag";
+    tg.textContent = d.tag;
+    head.append(nm, st, tg);
+    card.appendChild(head);
+
+    d.rows.forEach(([k, v, warn]) => {
+      const row = document.createElement("div");
+      row.className = "ha-row" + (warn ? " warn" : "");
+      const kk = document.createElement("span");
+      kk.className = "k";
+      kk.textContent = k;
+      const vv = document.createElement("span");
+      vv.className = "v";
+      vv.textContent = v;
+      row.append(kk, vv);
+      card.appendChild(row);
+    });
+
+    const a = document.createElement("a");
+    a.className = "ha-src";
+    a.href = d.url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.textContent = "KKU guideline ↗";
+    card.appendChild(a);
+
+    box.appendChild(card);
+  });
+}
+
+// Tab switching within the calculator screen.
+document.querySelectorAll("[data-calc-tab]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.calcTab;
+    document.querySelectorAll("[data-calc-tab]").forEach((b) =>
+      b.classList.toggle("active", b === btn)
+    );
+    $("calc-pressor").classList.toggle("hidden", tab !== "pressor");
+    $("calc-highalert").classList.toggle("hidden", tab !== "highalert");
+    if (tab === "highalert") renderHighAlert();
+  });
 });
