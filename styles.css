@@ -1351,3 +1351,22 @@ table.ref-table {
   margin-bottom: 10px;
 }
 .calc-secbar h3 { margin: 0; font-size: 16px; }
+
+/* ---------- Paediatric drug library ---------- */
+#pd-filter { margin-bottom: 10px; }
+.pd-cat { margin-bottom: 14px; }
+.pd-h {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--primary-dark);
+  border-bottom: 2px solid var(--line);
+  padding-bottom: 3px;
+}
+.pd-item {
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+.pd-item:first-of-type { border-top: none; }
+.pd-name { font-weight: 700; font-size: 13.5px; }
+.pd-dose { font-size: 13px; line-height: 1.4; }
+.pd-prep { font-size: 12px; color: var(--muted); line-height: 1.35; }

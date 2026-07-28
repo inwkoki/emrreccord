@@ -2763,6 +2763,130 @@ function renderCodesA() { renderCodes("codesA-cards", CODES_ADULT); }
 function renderCodesP() { renderCodes("codesP-cards", CODES_PEDS); }
 
 // ---------------------------------------------------------------------------
+// COMMON PAEDIATRIC DRUG DOSES
+// Curated from the Srinagarind / KKU "common paediatric drug doses" handbook.
+// mkDose = mg/kg/dose · mkDay = mg/kg/day. Doses transcribed where legible;
+// ambiguous rows omitted. Verify every dose/max for the individual child.
+// ---------------------------------------------------------------------------
+const PEDS_DRUGS = [
+  { cat: "Antipyretic / analgesic", drugs: [
+    { n: "Paracetamol", d: "10-15 mg/kg/dose PO q4-6h (max 90 mg/kg/day)", p: "syr 120 & 250 mg/5 mL · drop 60 mg/0.6 mL · tab 325/500 mg" },
+    { n: "Ibuprofen", d: "5-10 mg/kg/dose PO q6-8h (max 40 mg/kg/day)", p: "syr 100 mg/5 mL · tab 200/400 mg" },
+  ] },
+  { cat: "Antihistamine", drugs: [
+    { n: "Cetirizine", d: "2-6 yr: 5 mg q12-24h · >6 yr: 10 mg q24h", p: "syr 5 mg/5 mL · tab 10 mg" },
+    { n: "Chlorpheniramine (CPM)", d: "0.35 mg/kg/day PO ÷ q6-8h · IV 0.25 mg/kg/dose q6h (anaphylaxis)", p: "syr 2 mg/5 mL · tab 4 mg · IV 10 mg/mL" },
+    { n: "Hydroxyzine", d: "1-2 mg/kg/day PO ÷ q6-8h", p: "syr 10 mg/5 mL · tab 10/25 mg" },
+  ] },
+  { cat: "Cough / mucolytic", drugs: [
+    { n: "Bromhexine", d: "<2 yr 1 mg · 2-5 yr 2 mg · 5-10 yr 4 mg · >10 yr 8 mg — bid/tid", p: "syr 4 mg/5 mL · tab 8 mg" },
+    { n: "Carbocysteine", d: "<5 yr 125 mg · 5-12 yr 250 mg · >12 yr 500 mg — tid", p: "syr 250 mg/5 mL (kids 100 mg/5 mL)" },
+    { n: "Acetylcysteine", d: "50-100 mg/dose x2-4/day (or 20-30 mg/kg/day ÷ q8-12h)", p: "sachet 100/200 mg · tab 600 mg" },
+    { n: "Guaifenesin (GG)", d: "50-100 mg PO q6-8h", p: "100 mg/5 mL" },
+    { n: "Dextromethorphan", d: "1-2 mg/kg/day ÷ q6-8h (max 2-6 yr 30 · 6-12 yr 60 · >12 yr 120 mg/day)", p: "15 mg/tab" },
+  ] },
+  { cat: "Decongestant", drugs: [
+    { n: "Pseudoephedrine", d: "1 mg/kg/dose PO q6-8h", p: "syr 30 mg/5 mL · tab 60 mg" },
+    { n: "Oxymetazoline (nasal)", d: "<6 yr 0.025% · >6 yr 0.05% · 1-2 drops/puffs bid — max 3-5 days", p: "drop 0.025/0.05% · spray 0.05%" },
+  ] },
+  { cat: "Asthma / nebulized", drugs: [
+    { n: "Salbutamol (neb)", d: "0.05-0.15 mg/kg/dose + NSS to 4 mL, q20min x2-3 (acute); or ½ NB <20 kg, 1 NB >20 kg", p: "nebule 2.5 mg/2.5 mL · soln 5 mg/mL (0.03 mL/kg)" },
+    { n: "Ipratropium/fenoterol (Berodual, neb)", d: "<20 kg 250 mcg (½ NB) · >20 kg 500 mcg (1 NB) q6-8h", p: "500 mcg / 4 mL neb" },
+    { n: "Adrenaline (neb, croup)", d: "0.05-0.5 mL/kg/dose of 1:1000 + NSS to 4 mL (max <4 yr 2.5 mL · >4 yr 5 mL)", p: "1:1000 (1 mg/mL)" },
+    { n: "Terbutaline", d: "0.01 mg/kg/dose IM/SC (max 0.4 mg)", p: "0.5 mg/mL" },
+    { n: "Adrenaline (anaphylaxis, IM)", d: "0.01 mg/kg (0.01 mL/kg of 1:1000) IM thigh q5-15min (max 0.3 mL child / 0.5 mL adol.)", p: "1:1000 (1 mg/mL)" },
+  ] },
+  { cat: "Antiemetic / GI", drugs: [
+    { n: "Domperidone", d: "0.2-0.3 mg/kg/dose PO q6-8h (>6 mo)", p: "syr 5 mg/5 mL · tab 10 mg" },
+    { n: "Ondansetron", d: "0.15 mg/kg/dose IV/PO q8h", p: "IV 4 mg/amp · tab 8 mg" },
+    { n: "Metoclopramide (Plasil)", d: "0.1 mg/kg/dose IV/PO q6-8h", p: "IV 10 mg/amp · tab 10 mg" },
+    { n: "Dimenhydrinate", d: "1 mg/kg/dose IV/PO q6-8h", p: "IV 50 mg/amp · tab 50 mg" },
+    { n: "Omeprazole", d: "0.5-2 mg/kg/day PO/IV q12-24h (max 50 mg/dose)", p: "IV 40 mg/vial · tab 20 mg" },
+    { n: "Famotidine", d: "0.5 mg/kg/dose PO q12-24h", p: "tab 20/40 mg" },
+    { n: "Lactulose", d: "1-3 mL/kg/day PO (max 60 mL)", p: "10 g/15 mL" },
+    { n: "PEG (Forlax)", d: "disimpaction 1 g/kg/day; maintenance 0.5-1 g/kg/day", p: "10 g/sachet" },
+  ] },
+  { cat: "Steroid", drugs: [
+    { n: "Prednisolone", d: "1-2 mg/kg/day PO (max 60 mg/day)", p: "5 mg/tab" },
+    { n: "Dexamethasone", d: "croup 0.15-0.6 mg/kg IM/PO single; airway oedema 0.5-2 mg/kg/day IV ÷ q6h (max 8-10 mg/dose)", p: "IV 4 mg/mL" },
+    { n: "Hydrocortisone", d: "5 mg/kg/dose IV q6h (asthma / anaphylaxis)", p: "IV 100 mg/vial" },
+    { n: "Methylprednisolone", d: "1-2 mg/kg loading then 0.5-1 mg/kg/dose IV q6h", p: "IV 40 mg/mL" },
+  ] },
+  { cat: "Seizure / sedation", drugs: [
+    { n: "Diazepam", d: "0.3 mg/kg/dose IV; 0.5 mg/kg/dose rectal", p: "IV 10 mg/2 mL · tab 2/5 mg" },
+    { n: "Midazolam", d: "0.2 mg/kg IM (seizure alt); 0.05-0.1 mg/kg IV (max 5-10 mg)", p: "IV 5 mg/mL" },
+    { n: "Phenobarbital", d: "load 20 mg/kg IV; maintenance 4-6 mg/kg/day ÷ q12h", p: "IV 200 mg/mL" },
+    { n: "Phenytoin", d: "load 20 mg/kg IV (NSS only); maintenance 5-8 mg/kg/day ÷ q8-12h", p: "IV 250 mg/5 mL" },
+    { n: "Sodium valproate", d: "load 20-40 mg/kg; maintenance 15-60 mg/kg/day ÷ q8-12h", p: "IV 100 mg/mL · soln 200 mg/mL" },
+    { n: "Levetiracetam", d: "load 20-40 mg/kg; maintenance 20-80 mg/kg/day ÷ q12h", p: "IV/soln 100 mg/mL · tab 250/500 mg" },
+  ] },
+  { cat: "Antiviral", drugs: [
+    { n: "Oseltamivir", d: "≤15 kg 30 mg · 15-23 kg 45 mg · 23-40 kg 60 mg · >40 kg 75 mg — bid x5 days", p: "75 mg/cap (infant/preterm dosing differs)" },
+    { n: "Acyclovir", d: "HSV: 3 mo-12 yr 30-45 mg/kg/day IV ÷ q8h · VZV (chickenpox): PO 80 mg/kg/day ÷ 4-5 (max 800 mg/dose)", p: "IV vial · tab 200/400/800 mg" },
+  ] },
+  { cat: "Common antibiotics", drugs: [
+    { n: "Amoxicillin", d: "40-90 mg/kg/day PO ÷ q8-12h (max 4 g/day)", p: "syr 125 & 250 mg/5 mL · cap 250/500 mg" },
+    { n: "Amoxicillin/clavulanate", d: "30-90 mg/kg/day (of amox) PO ÷ q8-12h — use 7:1 ratio", p: "syr 228/457/642 mg/5 mL" },
+    { n: "Cloxacillin / Dicloxacillin", d: "PO 50-100 mg/kg/day ÷ q6h · IV 150-200 mg/kg/day ÷ q4-6h", p: "syr 125 mg/5 mL · cap 250/500 mg" },
+    { n: "Cephalexin", d: "25-100 mg/kg/day PO ÷ q6-8h (max 4 g)", p: "syr 125 & 250 mg/5 mL" },
+    { n: "Cefdinir", d: "14 mg/kg/day PO ÷ q12-24h (max 600 mg)", p: "syr 125 mg/5 mL · cap 300 mg" },
+    { n: "Ceftriaxone", d: "50-75 mg/kg/day IV/IM ÷ q12-24h; 100 mg/kg/day (meningitis), max 4 g", p: "0.5 & 1 g/vial" },
+    { n: "Azithromycin", d: "10 mg/kg/day PO OD x3 days (max 500 mg/day)", p: "syr · tab" },
+    { n: "Co-trimoxazole", d: "8-12 mg/kg/day (of TMP) PO ÷ q12h (max 160 mg TMP)", p: "syr 40/200 mg/5 mL" },
+    { n: "Metronidazole", d: "20-40 mg/kg/day PO/IV ÷ q8h (max 1.5 g)", p: "tab 200/400 mg · IV" },
+    { n: "Clindamycin", d: "10-40 mg/kg/day PO/IV ÷ q6-8h", p: "cap 150/300 mg · IV 600 mg/vial" },
+  ] },
+];
+
+function renderPedsDrugs() {
+  const list = $("pd-list");
+  if (!list || list.childElementCount) return;
+
+  // Category filter chips (All + one per category).
+  const filter = $("pd-filter");
+  const cats = ["All", ...PEDS_DRUGS.map((c) => c.cat)];
+  cats.forEach((cat, i) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip" + (i === 0 ? " active" : "");
+    chip.textContent = cat;
+    chip.addEventListener("click", () => {
+      filter.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c === chip));
+      list.querySelectorAll(".pd-cat").forEach((b) =>
+        b.classList.toggle("hidden", cat !== "All" && b.dataset.cat !== cat)
+      );
+    });
+    filter.appendChild(chip);
+  });
+
+  PEDS_DRUGS.forEach((c) => {
+    const block = document.createElement("div");
+    block.className = "pd-cat";
+    block.dataset.cat = c.cat;
+    const h = document.createElement("h4");
+    h.className = "pd-h";
+    h.textContent = c.cat;
+    block.appendChild(h);
+    c.drugs.forEach((d) => {
+      const it = document.createElement("div");
+      it.className = "pd-item";
+      const n = document.createElement("div");
+      n.className = "pd-name";
+      n.textContent = d.n;
+      const ds = document.createElement("div");
+      ds.className = "pd-dose";
+      ds.textContent = d.d;
+      const p = document.createElement("div");
+      p.className = "pd-prep";
+      p.textContent = d.p;
+      it.append(n, ds, p);
+      block.appendChild(it);
+    });
+    list.appendChild(block);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Reference navigation: a section menu (table of contents) + section views.
 // Adding a new reference = add a pane in index.html + one entry here.
 // ---------------------------------------------------------------------------
@@ -2772,6 +2896,7 @@ const SECTIONS = [
   { key: "codesA", em: "🫀", title: "Adult codes", desc: "ACLS: arrest · brady · tachy · cardioversion", lazy: renderCodesA },
   { key: "codesP", em: "👶", title: "Peds codes", desc: "PALS: arrest · brady · tachy", lazy: renderCodesP },
   { key: "rsi", em: "💊", title: "RSI drugs", desc: "Induction & paralytics, doses", lazy: renderRSI },
+  { key: "pdrugs", em: "🍼", title: "Peds drug doses", desc: "Common paediatric drugs (weight-based)", lazy: renderPedsDrugs },
   { key: "tbi", em: "🧠", title: "Mild TBI", desc: "Thai CPG risk stratification", lazy: renderTBI },
   { key: "peds", em: "📏", title: "Peds vital signs", desc: "PALS normal ranges by age", lazy: renderPeds },
 ];
