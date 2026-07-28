@@ -2306,26 +2306,31 @@ function renderHighAlert() { renderInto("ha-cards", HIGH_ALERT); }
 function renderRSI() { renderInto("rsi-cards", RSI_DRUGS); }
 function renderTBI() { renderInto("tbi-cards", TBI_GROUPS); }
 
-function renderPeds() {
-  const box = $("peds-table");
-  if (!box || box.childElementCount) return;
+// Build a titled, horizontally-scrollable reference table from {title, cols, rows}.
+function buildRefTable(spec) {
+  const container = document.createElement("div");
+  container.className = "ref-block";
+  if (spec.title) {
+    const h = document.createElement("h4");
+    h.className = "pd-h";
+    h.textContent = spec.title;
+    container.appendChild(h);
+  }
   const wrap = document.createElement("div");
   wrap.className = "ref-table-wrap";
   const table = document.createElement("table");
   table.className = "ref-table";
-
   const thead = document.createElement("thead");
   const htr = document.createElement("tr");
-  PEDS_VITALS.cols.forEach((c) => {
+  spec.cols.forEach((c) => {
     const th = document.createElement("th");
     th.textContent = c;
     htr.appendChild(th);
   });
   thead.appendChild(htr);
   table.appendChild(thead);
-
   const tbody = document.createElement("tbody");
-  PEDS_VITALS.rows.forEach((r) => {
+  spec.rows.forEach((r) => {
     const tr = document.createElement("tr");
     r.forEach((cell) => {
       const td = document.createElement("td");
@@ -2336,11 +2341,52 @@ function renderPeds() {
   });
   table.appendChild(tbody);
   wrap.appendChild(table);
-  box.appendChild(wrap);
+  container.appendChild(wrap);
+  return container;
+}
 
+function renderPeds() {
+  const box = $("peds-table");
+  if (!box || box.childElementCount) return;
+  PEDS_VITALS.tables.forEach((t) => box.appendChild(buildRefTable(t)));
   const foot = document.createElement("p");
   foot.className = "hint";
   foot.textContent = PEDS_VITALS.foot;
+  box.appendChild(foot);
+}
+
+// Weight / height / tube-size by age, computed from the Survival-Guide formulae.
+function renderPedsByAge() {
+  const box = $("pedage-table");
+  if (!box || box.childElementCount) return;
+  const ages = [
+    { lbl: "3 mo", m: 3 }, { lbl: "6 mo", m: 6 }, { lbl: "9 mo", m: 9 },
+    { lbl: "1 yr", y: 1 }, { lbl: "2 yr", y: 2 }, { lbl: "3 yr", y: 3 }, { lbl: "4 yr", y: 4 },
+    { lbl: "5 yr", y: 5 }, { lbl: "6 yr", y: 6 }, { lbl: "7 yr", y: 7 }, { lbl: "8 yr", y: 8 },
+    { lbl: "9 yr", y: 9 }, { lbl: "10 yr", y: 10 }, { lbl: "11 yr", y: 11 }, { lbl: "12 yr", y: 12 },
+  ];
+  const r1 = (v) => parseFloat(v.toFixed(1)).toString();
+  const half = (v) => (Math.round(v * 2) / 2).toString();
+  const ibw = (a) =>
+    a.m !== undefined ? r1((a.m + 9) / 2) : a.y <= 6 ? r1(2 * a.y + 8) : r1((7 * a.y - 5) / 2);
+  const rows = ages.map((a) => {
+    const infant = a.m !== undefined || a.y < 2;
+    const height = a.m !== undefined ? "—" : a.y === 1 ? "75" : String(a.y * 6 + 77);
+    const uncuff = a.m !== undefined ? "3.5-4.0" : a.y < 2 ? "4.0" : half(a.y / 4 + 4);
+    const cuff = a.m !== undefined ? "3.0-3.5" : a.y < 2 ? "3.5" : half(a.y / 4 + 3.5);
+    const depth = infant ? "—" : r1(a.y / 2 + 12);
+    return [a.lbl, ibw(a), height, uncuff, cuff, depth];
+  });
+  box.appendChild(buildRefTable({
+    title: "Weight, height & tube size by age",
+    cols: ["Age", "IBW (kg)", "Height (cm)", "ETT uncuff (mm)", "ETT cuff (mm)", "Depth (cm)"],
+    rows,
+  }));
+  const foot = document.createElement("p");
+  foot.className = "hint";
+  foot.textContent =
+    "IBW: 3-12 mo (age+9)/2 · 1-6 yr 2×age+8 · 7-12 yr (7×age−5)/2. Height P50 (≥2 yr): age×6+77. " +
+    "ETT: uncuffed age/4+4, cuffed age/4+3.5, depth age/2+12 (formulae for ≥2 yr).";
   box.appendChild(foot);
 }
 
@@ -2485,7 +2531,8 @@ const SECTIONS = [
   { key: "pdrugs", em: "🍼", title: "Peds drug doses", desc: "Common paediatric drugs (weight-based)", lazy: renderPedsDrugs },
   { key: "elyte", em: "🧂", title: "Electrolyte correction", desc: "K / Ca / Mg / Na / glucose dosing", lazy: renderElyte },
   { key: "tbi", em: "🧠", title: "Mild TBI", desc: "Thai CPG risk stratification", lazy: renderTBI },
-  { key: "peds", em: "📏", title: "Peds vital signs", desc: "PALS normal ranges by age", lazy: renderPeds },
+  { key: "peds", em: "📏", title: "Peds vital signs", desc: "HR · RR · SBP · ETT by age", lazy: renderPeds },
+  { key: "pedage", em: "📐", title: "Peds by age", desc: "IBW · height · tube size by age", lazy: renderPedsByAge },
 ];
 
 function showCalcSection(key) {
@@ -2526,7 +2573,8 @@ function buildSearchIndex() {
   PEDS_DRUGS.forEach((c) => c.drugs.forEach((dr) => add(dr.n, c.cat + " " + dr.d, "pdrugs", "Peds drug — " + c.cat)));
   TBI_GROUPS.forEach((g) => add(g.name, g.need + " " + (g.items || []).join(" "), "tbi", "Mild TBI"));
   ELYTE_CORRECTION.forEach((d) => add(d.name, d.tag + " " + rowsText(d.rows) + " " + secText(d.sections), "elyte", "Electrolyte correction"));
-  add("Paediatric vital signs", PEDS_VITALS.rows.map((r) => r.join(" ")).join(" "), "peds", "Peds vital signs");
+  add("Paediatric vital signs", PEDS_VITALS.tables.map((t) => t.rows.map((r) => r.join(" ")).join(" ")).join(" "), "peds", "Peds vital signs");
+  add("Weight & tube size by age", "IBW ideal body weight height ETT endotracheal tube cuffed uncuffed depth by age", "pedage", "Peds by age");
   add("Peds resus by weight", "adrenaline atropine amiodarone adenosine defibrillation cardioversion fluid bolus dextrose maintenance 4-2-1", "pbw", "Peds by weight");
   return idx;
 }

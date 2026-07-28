@@ -343,16 +343,22 @@ export const TBI_GROUPS = [
 ];
 
 export const PEDS_VITALS = {
-  cols: ["Age", "HR (/min)", "RR (/min)", "SBP↓ (mmHg)", "Wt est (kg)", "ETT (mm)"],
-  rows: [
-    ["Neonate (0-1 mo)", "100-205", "30-60", "< 60", "~3.5", "3.0-3.5 uncuffed"],
-    ["Infant (1-12 mo)", "100-180", "30-53", "< 70", "4-10", "3.5-4.0"],
-    ["Toddler (1-2 y)", "98-140", "22-37", "< 70 + 2×age", "10-13", "4.0-4.5"],
-    ["Preschool (3-5 y)", "80-120", "20-28", "< 70 + 2×age", "14-18", "4.5-5.0"],
-    ["School (6-11 y)", "75-118", "18-25", "< 70 + 2×age", "20-38", "5.5-6.5"],
-    ["Adolescent (12-15 y)", "60-100", "12-20", "< 90", "40-60", "6.5-7.0 cuffed"],
+  tables: [
+    { title: "Heart rate (at rest, /min)", cols: ["Age", "HR"], rows: [
+      ["Birth", "100-180"], ["1 wk - 3 mo", "100-220"], ["3 mo - 2 yr", "80-150"],
+      ["2-10 yr", "70-110"], [">10 yr", "55-90"],
+    ] },
+    { title: "Respiratory rate (upper limit, /min)", cols: ["Age", "RR"], rows: [
+      ["Birth - 2 mo", "< 60"], ["2 mo - 1 yr", "< 50"], ["1-5 yr", "< 40"], ["> 5 yr", "< 20-30"],
+    ] },
+    { title: "Hypotension — systolic BP (mmHg)", cols: ["Age", "SBP <"], rows: [
+      ["Newborn", "< 60"], ["1-12 mo", "< 70"], ["1-10 yr", "70 + 2 × age"], [">10 yr", "< 90"],
+    ] },
+    { title: "ETT size & depth (by age)", cols: ["Item", "Formula"], rows: [
+      ["Size — uncuffed", "age/4 + 4 mm"], ["Size — cuffed", "age/4 + 3.5 mm"], ["Depth at lip", "age/2 + 12 cm"],
+    ] },
   ],
-  foot: "Estimates: weight (kg) ≈ (age+4)×2 for 1-10 y · uncuffed ETT ≈ age/4 + 4 · cuffed ETT ≈ age/4 + 3.5.",
+  foot: "Source: Pediatric Survival Guide (Ped-in-a-page). Neonatal ETT ≈ 3.0-3.5 (uncuffed) / 3.0 (cuffed).",
 };
 
 export const PEDS_DRUGS = [
@@ -364,12 +370,13 @@ export const PEDS_DRUGS = [
     { n: "Cetirizine", d: "2-6 yr: 5 mg q12-24h · >6 yr: 10 mg q24h", p: "syr 5 mg/5 mL · tab 10 mg" },
     { n: "Chlorpheniramine (CPM)", d: "0.35 mg/kg/day PO ÷ q6-8h · IV 0.25 mg/kg/dose q6h (anaphylaxis)", p: "syr 2 mg/5 mL · tab 4 mg · IV 10 mg/mL" },
     { n: "Hydroxyzine", d: "1-2 mg/kg/day PO ÷ q6-8h", p: "syr 10 mg/5 mL · tab 10/25 mg" },
+    { n: "Diphenhydramine (Benadryl)", d: "5 mg/kg/day PO ÷ q6-8h", p: "syr 12.5 mg/5 mL" },
   ] },
   { cat: "Cough / mucolytic", drugs: [
     { n: "Bromhexine", d: "<2 yr 1 mg · 2-5 yr 2 mg · 5-10 yr 4 mg · >10 yr 8 mg — bid/tid", p: "syr 4 mg/5 mL · tab 8 mg" },
     { n: "Carbocysteine", d: "<5 yr 125 mg · 5-12 yr 250 mg · >12 yr 500 mg — tid", p: "syr 250 mg/5 mL (kids 100 mg/5 mL)" },
     { n: "Acetylcysteine", d: "50-100 mg/dose x2-4/day (or 20-30 mg/kg/day ÷ q8-12h)", p: "sachet 100/200 mg · tab 600 mg" },
-    { n: "Guaifenesin (GG)", d: "50-100 mg PO q6-8h", p: "100 mg/5 mL" },
+    { n: "Guaifenesin (GG)", d: "<2 yr 12 mg/kg/day ÷ q6-8h · 2-5 yr 50-100 mg · 6-11 yr 100-200 mg — q6-8h", p: "100 mg/5 mL" },
     { n: "Dextromethorphan", d: "1-2 mg/kg/day ÷ q6-8h (max 2-6 yr 30 · 6-12 yr 60 · >12 yr 120 mg/day)", p: "15 mg/tab" },
   ] },
   { cat: "Decongestant", drugs: [
@@ -384,7 +391,7 @@ export const PEDS_DRUGS = [
     { n: "Adrenaline (anaphylaxis, IM)", d: "0.01 mg/kg (0.01 mL/kg of 1:1000) IM thigh q5-15min (max 0.3 mL child / 0.5 mL adol.)", p: "1:1000 (1 mg/mL)" },
   ] },
   { cat: "Antiemetic / GI", drugs: [
-    { n: "Domperidone", d: "0.2-0.3 mg/kg/dose PO q6-8h (>6 mo)", p: "syr 5 mg/5 mL · tab 10 mg" },
+    { n: "Domperidone", d: "0.2-0.4 mg/kg/dose PO q6-8h ac (>6 mo)", p: "syr 5 mg/5 mL · tab 10 mg" },
     { n: "Ondansetron", d: "0.15 mg/kg/dose IV/PO q8h", p: "IV 4 mg/amp · tab 8 mg" },
     { n: "Metoclopramide (Plasil)", d: "0.1 mg/kg/dose IV/PO q6-8h", p: "IV 10 mg/amp · tab 10 mg" },
     { n: "Dimenhydrinate", d: "1 mg/kg/dose IV/PO q6-8h", p: "IV 50 mg/amp · tab 50 mg" },
@@ -414,12 +421,16 @@ export const PEDS_DRUGS = [
   { cat: "Common antibiotics", drugs: [
     { n: "Amoxicillin", d: "40-90 mg/kg/day PO ÷ q8-12h (max 4 g/day)", p: "syr 125 & 250 mg/5 mL · cap 250/500 mg" },
     { n: "Amoxicillin/clavulanate", d: "30-90 mg/kg/day (of amox) PO ÷ q8-12h — use 7:1 ratio", p: "syr 228/457/642 mg/5 mL" },
-    { n: "Cloxacillin / Dicloxacillin", d: "PO 50-100 mg/kg/day ÷ q6h · IV 150-200 mg/kg/day ÷ q4-6h", p: "syr 125 mg/5 mL · cap 250/500 mg" },
-    { n: "Cephalexin", d: "25-100 mg/kg/day PO ÷ q6-8h (max 4 g)", p: "syr 125 & 250 mg/5 mL" },
-    { n: "Cefdinir", d: "14 mg/kg/day PO ÷ q12-24h (max 600 mg)", p: "syr 125 mg/5 mL · cap 300 mg" },
+    { n: "Cloxacillin", d: "50-100 mg/kg/day PO ÷ q6h (IV 100-200 mg/kg/day ÷ q4-6h)", p: "syr 125 mg/5 mL · cap 250/500 mg" },
+    { n: "Dicloxacillin", d: "<40 kg: 12.5-25 mg/kg/day PO ÷ q6h · >40 kg: 125-250 mg qid (not in newborns)", p: "syr 62.5 mg/5 mL · cap 250/500 mg" },
+    { n: "Cephalexin", d: "25-50 mg/kg/day PO ÷ q6-8h (up to 100 for severe, max 4 g)", p: "syr 125 & 250 mg/5 mL" },
+    { n: "Cefaclor", d: "20-40 mg/kg/day PO ÷ q8h (infant >1 mo)", p: "syr 125 mg/5 mL" },
+    { n: "Cefdinir", d: "14 mg/kg/day PO ÷ q12-24h (7 mg/kg/dose q12h; max 600 mg)", p: "syr 125 mg/5 mL · cap 300 mg" },
     { n: "Ceftriaxone", d: "50-75 mg/kg/day IV/IM ÷ q12-24h; 100 mg/kg/day (meningitis), max 4 g", p: "0.5 & 1 g/vial" },
-    { n: "Azithromycin", d: "10 mg/kg/day PO OD x3 days (max 500 mg/day)", p: "syr · tab" },
-    { n: "Co-trimoxazole", d: "8-12 mg/kg/day (of TMP) PO ÷ q12h (max 160 mg TMP)", p: "syr 40/200 mg/5 mL" },
+    { n: "Azithromycin", d: "CAP: 10 mg/kg day 1 then 5 mg/kg/day (days 2-5); OM/sinusitis: 10 mg/kg OD x3 days", p: "syr 200 mg/5 mL · tab" },
+    { n: "Erythromycin", d: "30-50 mg/kg/day PO ÷ q6-8h", p: "syr 125 mg/5 mL" },
+    { n: "Penicillin V", d: "25-50 mg/kg/day PO ÷ q6h", p: "syr 125 mg/5 mL (200,000 u)" },
+    { n: "Co-trimoxazole", d: "8 mg/kg/day (of TMP) PO ÷ q12h — i.e. 4 mg/kg/dose (max 160 mg TMP)", p: "syr 40/200 mg/5 mL" },
     { n: "Metronidazole", d: "20-40 mg/kg/day PO/IV ÷ q8h (max 1.5 g)", p: "tab 200/400 mg · IV" },
     { n: "Clindamycin", d: "10-40 mg/kg/day PO/IV ÷ q6-8h", p: "cap 150/300 mg · IV 600 mg/vial" },
   ] },

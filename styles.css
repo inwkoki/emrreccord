@@ -1410,3 +1410,6 @@ table.ref-table {
 /* ---------- Peds-by-weight calculator output ---------- */
 #pbw-out { margin-top: 4px; }
 #pbw-out .ha-row { grid-template-columns: 150px 1fr; }
+
+.ref-block { margin-bottom: 14px; }
+.ref-block .pd-h { margin-bottom: 6px; }
