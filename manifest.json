@@ -1,0 +1,14 @@
+{
+  "name": "ED QuickCapture",
+  "short_name": "ED QC",
+  "description": "Bedside → station ED documentation, drip calculator and clinical reference.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1f5f9",
+  "theme_color": "#0d9488",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

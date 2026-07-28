@@ -32,6 +32,13 @@ import {
   HA_P307, HA_P306, PRESSORS, HIGH_ALERT, CODES_ADULT, CODES_PEDS, RSI_DRUGS, TBI_GROUPS, PEDS_VITALS, PEDS_DRUGS,
 } from "./reference-data.js";
 
+// Register the service worker for offline support (best-effort).
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () =>
+    navigator.serviceWorker.register("./sw.js").catch(() => {})
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Elements
 // ---------------------------------------------------------------------------
