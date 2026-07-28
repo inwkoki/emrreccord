@@ -119,6 +119,7 @@ let customChips = {
 };
 let chipsSubscribed = false;
 let customNormalPe = ""; // per-user editable "Normal" physical-exam text
+let condOverrides = {}; // per-user edited wording for quick (condition) templates
 
 // ---------------------------------------------------------------------------
 // Firebase init + config guard
@@ -892,7 +893,7 @@ function reorderTemplate(id, dir) {
 
 function loadTemplateForEdit(id, shared, t) {
   clearForm();
-  applyTemplateObj(t);
+  loadFieldsRaw(t.fields); // keep macros unexpanded while editing
   editingTemplate = { id, shared };
   document.getElementById("save-template-editor").classList.remove("hidden");
   document.getElementById("macro-hint").classList.remove("hidden");
@@ -987,13 +988,28 @@ function renderDeptTemplates() {
 function resetTemplateEditor() {
   editingTemplate = null;
   document.getElementById("tpl-name").value = "";
+  document.getElementById("tpl-name").classList.remove("hidden");
   const shareCb = document.getElementById("tpl-share");
   shareCb.checked = false;
   shareCb.disabled = false;
+  document.querySelector("#save-template-editor .share-label").classList.remove("hidden");
+  document.getElementById("tpl-reset").classList.add("hidden");
   document.getElementById("tpl-save-confirm").textContent = "Save template";
   document.getElementById("save-template-editor").classList.add("hidden");
   document.getElementById("macro-hint").classList.add("hidden");
 }
+
+// Reset a quick template's wording back to the built-in default.
+document.getElementById("tpl-reset").addEventListener("click", () => {
+  if (editingTemplate && editingTemplate.condKey) {
+    set(ref(db, "users/" + uid + "/condOverrides/" + editingTemplate.condKey), null).catch((e) =>
+      console.error("reset cond", e)
+    );
+    setStatus(bedsideStatus, "Reset “" + editingTemplate.label + "” to default.", "ok");
+  }
+  clearForm();
+  resetTemplateEditor();
+});
 
 document.getElementById("save-template").addEventListener("click", () => {
   document.getElementById("templates-panel").classList.remove("hidden"); // expand panel
@@ -1018,13 +1034,25 @@ document.getElementById("tpl-edit").addEventListener("click", () => {
   renderQuickTemplates(); // show/hide the ✕/↺ hide toggles
 });
 function saveTemplate() {
-  const name = document.getElementById("tpl-name").value.trim();
-  if (!name) return;
   const fields = {};
   TEMPLATE_FIELDS.forEach((f) => {
     const v = (FIELD_MAP[f].value || "").trim();
     if (v) fields[f] = v;
   });
+
+  // Editing a quick (condition) template's wording → save as an override.
+  if (editingTemplate && editingTemplate.condKey) {
+    set(ref(db, "users/" + uid + "/condOverrides/" + editingTemplate.condKey), { fields }).catch((e) =>
+      console.error("save cond override", e)
+    );
+    setStatus(bedsideStatus, "Saved changes to “" + editingTemplate.label + "”.", "ok");
+    clearForm();
+    resetTemplateEditor();
+    return;
+  }
+
+  const name = document.getElementById("tpl-name").value.trim();
+  if (!name) return;
   const share = document.getElementById("tpl-share").checked;
 
   if (editingTemplate) {
@@ -1310,6 +1338,10 @@ function subscribeCustomChips() {
   onValue(ref(db, "users/" + uid + "/normalPe"), (snap) => {
     customNormalPe = snap.val() || "";
   });
+  onValue(ref(db, "users/" + uid + "/condOverrides"), (snap) => {
+    condOverrides = snap.val() || {};
+    renderQuickTemplates();
+  });
 }
 
 function addCustomItem(group) {
@@ -1496,8 +1528,9 @@ const CONDITION_TEMPLATES = {
   },
 };
 
-// Quick (condition) templates — rendered dynamically so they can be hidden
-// per user via the ✏️ edit toggle.
+// Quick (condition) templates. Each has editable field-fill defaults (with
+// {{now}} / {{now+2h}} macros for dynamic times). Users can edit the wording
+// (stored as an override in /users/{uid}/condOverrides/{key}), hide, or restore.
 const QUICK_TEMPLATES = [
   { key: "sepsis", label: "🦠 Sepsis" },
   { key: "chestpain", label: "🫀 Chest pain" },
@@ -1505,6 +1538,64 @@ const QUICK_TEMPLATES = [
   { key: "stroke", label: "🧠 Stroke" },
   { key: "trauma", label: "🚑 Trauma" },
 ];
+
+const CONDITION_DEFAULTS = {
+  sepsis: { fields: {
+    management: "[Septic work-up]\n- IV access x2; O2 to keep SpO2 >= 94%\n- Hemoculture x2 (before antibiotics)\n- CBC, BUN/Cr, electrolytes, LFT, coagulogram\n- Lactate (repeat if >= 2)\n- Urinalysis + urine culture; consider CXR\n- IV fluid resuscitation (see fluid)\n- Antibiotics within 1 hr (see antibiotic)\n- Identify & control source: ___",
+    fluid: "NSS/RLS 30 ml/kg IV bolus, reassess",
+    oxygen: "Nasal cannula",
+  } },
+  chestpain: { fields: {
+    bedside: "[Serial ECG]\nECG #1 ({{now}}): rate/rhythm ___ , axis ___ , ST-segment ___ , T-wave ___\nECG #2 (____): rate/rhythm ___ , ST-segment ___ (compare to #1)\nECG #3 (____): ___",
+    management: "[Chest pain / ACS work-up]\n- 12-lead ECG within 10 min of arrival; serial ECG (see bedside test)\n- Cardiac troponin (serial) + CBC, BUN/Cr, electrolytes, coagulogram\n- Continuous cardiac monitor + SpO2; IV access\n- ASA (if not contraindicated); analgesia; consider GTN\n- CXR; risk-stratify (e.g. HEART score)",
+  } },
+  anaphylaxis: { fields: {
+    management: "[Anaphylaxis]\n- Epinephrine 1:1000 0.5 ml IM anterolateral thigh (given {{now}})\n- Remove trigger; high-flow O2; lay supine with legs raised\n- IV access; IV fluid bolus\n- CPM 10 mg IV stat\n- Dexamethasone 8 mg IV stat\n- Observe for at least 2 hours (until {{now+2h}})\n- Repeat epinephrine every 5-15 min if no improvement",
+    fluid: "NSS IV bolus",
+    oxygen: "Non-rebreather mask",
+  } },
+  stroke: { fields: {
+    exam: "[Stroke / neuro assessment]\nLast known well: ___    Onset: ___\nGCS: E_V_M_    Pupils: R__ L__\nNIHSS total: ___\n- LOC / orientation / commands: ___\n- Best gaze / visual fields: ___\n- Facial palsy: ___\n- Motor arm   R: ___   L: ___\n- Motor leg   R: ___   L: ___\n- Limb ataxia: ___\n- Sensory: ___\n- Language / dysarthria: ___\n- Extinction / neglect: ___\nCapillary blood glucose: ___",
+    management: "[Stroke fast-track]\n- NPO; head of bed 30°\n- CT brain non-contrast STAT (± CTA)\n- Capillary glucose; correct if abnormal\n- BP monitoring (avoid over-correction)\n- Screen thrombolysis / thrombectomy eligibility\n- Notify stroke team; document onset/LKW time",
+  } },
+  trauma: { fields: {
+    exam: "[Primary survey — ABCDE]\nA (airway + C-spine control): ___\nB (breathing, RR, chest, SpO2): ___\nC (circulation, pulses, external bleeding): ___\nD (disability, GCS __, pupils R__ L__): ___\nE (exposure, temp, log-roll / back): ___\n\n[EFAST]\n- Pericardial: ___\n- RUQ (Morison's pouch): ___\n- LUQ (splenorenal): ___\n- Pelvis / pouch of Douglas: ___\n- Lung sliding   R: ___   L: ___\n\n[Secondary survey / AMPLE Hx]: ___",
+    management: "[Trauma resuscitation]\n- Time of arrival: {{now}}   Primary survey: {{now}}\n- 2 large-bore IV; trauma labs + group & cross-match\n- Control external hemorrhage; C-collar / immobilization\n- Analgesia; tetanus prophylaxis as indicated\n- Imaging: trauma series / CT as indicated\n- Activate massive transfusion protocol if needed",
+  } },
+};
+
+// Current fields for a condition = the user's override if present, else default.
+function getCond(key) {
+  return (condOverrides[key] && condOverrides[key].fields) || CONDITION_DEFAULTS[key].fields;
+}
+
+// Populate the form from field data WITHOUT expanding macros (for editing).
+function loadFieldsRaw(fields) {
+  Object.entries(fields || {}).forEach(([field, val]) => {
+    const el = FIELD_MAP[field];
+    if (!el) return;
+    if (el.tagName === "TEXTAREA") appendText(el, val);
+    else el.value = val;
+  });
+}
+
+function loadCondForEdit(key, label) {
+  clearForm();
+  loadFieldsRaw(getCond(key));
+  editingTemplate = { condKey: key, label };
+  document.getElementById("templates-panel").classList.remove("editing");
+  document.getElementById("tpl-edit").textContent = "✏️";
+  document.getElementById("tpl-edit").classList.remove("active");
+  document.getElementById("tpl-edit-banner").classList.add("hidden");
+  const ed = document.getElementById("save-template-editor");
+  ed.classList.remove("hidden");
+  document.getElementById("macro-hint").classList.remove("hidden");
+  document.getElementById("tpl-name").classList.add("hidden");
+  document.querySelector("#save-template-editor .share-label").classList.add("hidden");
+  document.getElementById("tpl-reset").classList.remove("hidden");
+  document.getElementById("tpl-save-confirm").textContent = "Save changes to " + label;
+  setStatus(bedsideStatus, "Editing quick template “" + label + "” — edit the fields, then Save changes.", "ok");
+}
 
 function renderQuickTemplates() {
   const el = document.getElementById("quick-templates");
@@ -1519,13 +1610,9 @@ function renderQuickTemplates() {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "chip cond";
-      btn.textContent = qt.label;
+      btn.textContent = qt.label + (condOverrides[qt.key] ? " ✎" : "");
       btn.addEventListener("click", () => {
-        const fn = CONDITION_TEMPLATES[qt.key];
-        if (fn) {
-          fn();
-          setStatus(bedsideStatus, "Inserted " + qt.key + " template.", "ok");
-        }
+        applyTemplateObj({ name: qt.label, fields: getCond(qt.key) });
       });
       el.appendChild(btn);
     } else {
@@ -1535,6 +1622,20 @@ function renderQuickTemplates() {
       t.className = "lbl-txt";
       t.textContent = qt.label;
       t.style.cursor = "default";
+      chip.appendChild(t);
+      if (!isHidden) {
+        const e = document.createElement("button");
+        e.type = "button";
+        e.className = "x";
+        e.style.display = "inline";
+        e.textContent = "✎";
+        e.title = "edit wording";
+        e.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          loadCondForEdit(qt.key, qt.label);
+        });
+        chip.appendChild(e);
+      }
       const x = document.createElement("button");
       x.type = "button";
       x.className = "x";
@@ -1551,7 +1652,7 @@ function renderQuickTemplates() {
         saveCustomChips("hiddenQt");
         renderQuickTemplates();
       });
-      chip.append(t, x);
+      chip.appendChild(x);
       el.appendChild(chip);
     }
   });

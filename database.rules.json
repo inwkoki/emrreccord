@@ -8,6 +8,12 @@
         "displayName": { ".validate": "newData.isString() && newData.val().length <= 40" },
         "createdAt":   { ".validate": "newData.val() <= now" },
         "normalPe":    { ".validate": "newData.isString() && newData.val().length <= 4000" },
+        "condOverrides": {
+          "$key": {
+            "fields": { "$f": { ".validate": "newData.isString() && newData.val().length <= 8000" } },
+            "$other": { ".validate": false }
+          }
+        },
         "chips": {
           "$group": {
             "$i": { ".validate": "newData.isString() && newData.val().length <= 200" }

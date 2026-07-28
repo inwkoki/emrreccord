@@ -84,11 +84,11 @@
         <!-- Templates (collapsible; combines quick + mine + dept) -->
         <div class="tpl-panel-head">
           <button type="button" id="templates-toggle" class="chip">⚡ Templates</button>
-          <button type="button" class="chip" id="save-template">💾 Save</button>
+          <button type="button" class="chip" id="save-template">＋ New</button>
           <button type="button" class="chip mini edit" id="tpl-edit" title="Edit / hide templates">✏️</button>
         </div>
         <div id="templates-panel" class="tpl-panel hidden">
-          <p id="tpl-edit-banner" class="tpl-edit-banner hidden">✏️ <b>Editing</b> — Quick: ✕ hide / ↺ restore · Yours: ✎ edit · ▲▼ reorder · ✕ delete. Tap <b>✓ Done</b> when finished.</p>
+          <p id="tpl-edit-banner" class="tpl-edit-banner hidden">✏️ <b>Editing</b> — Quick: ✎ edit wording · ✕ hide / ↺ restore · Yours: ✎ edit · ▲▼ reorder · ✕ delete. Tap <b>✓ Done</b> when finished.</p>
           <div class="tpl-group"><span class="tpl-bar-label">Quick</span><span id="quick-templates" class="custom-chips"></span></div>
           <div class="tpl-group"><span class="tpl-bar-label">Mine</span><span id="my-templates" class="custom-chips"></span></div>
           <div class="tpl-group"><span class="tpl-bar-label">Dept</span><span id="dept-templates" class="custom-chips"></span></div>
@@ -116,6 +116,7 @@
             <input id="tpl-name" type="text" placeholder="Template name…" maxlength="40" autocomplete="off" />
             <label class="share-label"><input type="checkbox" id="tpl-share" /> Share with dept</label>
             <button type="button" class="chip mini" id="tpl-save-confirm">Save template</button>
+            <button type="button" class="chip mini hidden" id="tpl-reset">↺ Reset to default</button>
           </div>
           <p id="macro-hint" class="hint hidden">
             💡 <b>Auto-time macros</b> — type these in any field before saving; they fill in when the template is applied:
