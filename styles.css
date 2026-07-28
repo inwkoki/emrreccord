@@ -406,6 +406,30 @@ body {
   opacity: 0.45;
 }
 
+/* Editing-mode indicators */
+#templates-panel.editing {
+  border-color: var(--warn);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+  background: #fffdf5;
+}
+
+.chip.edit.active {
+  background: var(--warn);
+  color: #fff;
+  border-color: var(--warn);
+}
+
+.tpl-edit-banner {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0 0 8px;
+}
+
 .chip-editor {
   display: flex;
   gap: 6px;

@@ -1009,7 +1009,12 @@ document.getElementById("save-template").addEventListener("click", () => {
 document.getElementById("tpl-edit").addEventListener("click", () => {
   const panel = document.getElementById("templates-panel");
   panel.classList.remove("hidden"); // expand so edits are visible
-  panel.classList.toggle("editing");
+  const editing = panel.classList.toggle("editing");
+  const btn = document.getElementById("tpl-edit");
+  btn.textContent = editing ? "✓ Done" : "✏️";
+  btn.classList.toggle("active", editing);
+  btn.title = editing ? "Finish editing" : "Edit / hide templates";
+  document.getElementById("tpl-edit-banner").classList.toggle("hidden", !editing);
   renderQuickTemplates(); // show/hide the ✕/↺ hide toggles
 });
 function saveTemplate() {
