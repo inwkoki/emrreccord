@@ -1937,8 +1937,6 @@ function formatNote(e) {
   parts.push("PATIENT: " + (e.bed || "(no bed)"));
   if (e.complaint) parts.push("\nCHIEF COMPLAINT:\n" + e.complaint);
   if (e.history) parts.push("\nHISTORY:\n" + e.history);
-  if (e.homemed) parts.push("\nHOME MEDICATION:\n" + e.homemed);
-  if (e.immun) parts.push("\nIMMUNIZATION / VACCINE:\n" + e.immun);
 
   const vit = vitalsLine(e);
   if (vit) parts.push("\nVITALS:\n" + vit);
@@ -1949,6 +1947,8 @@ function formatNote(e) {
   if (e.fluid) parts.push("\nIV FLUID:\n" + e.fluid);
   if (e.antibiotic) parts.push("\nANTIBIOTIC:\n" + e.antibiotic);
   if (e.consult) parts.push("\nCONSULTATION: " + e.consult);
+  if (e.homemed) parts.push("\nHOME MEDICATION:\n" + e.homemed);
+  if (e.immun) parts.push("\nIMMUNIZATION / VACCINE:\n" + e.immun);
   if (e.disposition) parts.push("\nDISPOSITION: " + e.disposition);
   if (e.cpr) parts.push("\n" + e.cpr);
 

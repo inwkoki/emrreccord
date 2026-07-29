@@ -163,24 +163,6 @@
         </div>
         <textarea id="f-history" rows="3" placeholder="Onset, associated sx, past history, meds, allergies…"></textarea>
 
-        <label class="lbl">Home medication</label>
-        <input id="f-homemed" type="text" placeholder="current home meds…" maxlength="200" />
-
-        <label class="lbl">Immunization / vaccine</label>
-        <div class="chip-row" id="immun-chips">
-          <button type="button" class="chip mini" data-immun="Tetanus (Td/Tdap) booster given">TT booster</button>
-          <button type="button" class="chip mini" data-immun="Tetanus primary course started">TT course</button>
-          <button type="button" class="chip mini" data-immun="TIG given">TIG</button>
-          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D0">Rabies D0</button>
-          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D3">D3</button>
-          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D7">D7</button>
-          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D14">D14</button>
-          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D28">D28</button>
-          <button type="button" class="chip mini" data-immun="Rabies booster (D0, D3)">Rabies booster</button>
-          <button type="button" class="chip mini" data-immun="RIG (ERIG/HRIG) given">RIG</button>
-        </div>
-        <input id="f-immun" type="text" placeholder="tetanus / rabies (Speeda) — course · booster · dates" maxlength="200" />
-
         <!-- Vital signs -->
         <label class="lbl">Vital signs</label>
         <div class="vitals-grid">
@@ -372,6 +354,24 @@
           <option>Psychiatry</option>
           <option>ICU / Critical care</option>
         </select>
+
+        <label class="lbl">Home medication</label>
+        <input id="f-homemed" type="text" placeholder="discharge / home meds…" maxlength="200" />
+
+        <label class="lbl">Immunization / vaccine</label>
+        <div class="chip-row" id="immun-chips">
+          <button type="button" class="chip mini" data-immun="Tetanus (Td/Tdap) booster given">TT booster</button>
+          <button type="button" class="chip mini" data-immun="Tetanus primary course started">TT course</button>
+          <button type="button" class="chip mini" data-immun="TIG given">TIG</button>
+          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D0">Rabies D0</button>
+          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D3">D3</button>
+          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D7">D7</button>
+          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D14">D14</button>
+          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D28">D28</button>
+          <button type="button" class="chip mini" data-immun="Rabies booster (D0, D3)">Rabies booster</button>
+          <button type="button" class="chip mini" data-immun="RIG (ERIG/HRIG) given">RIG</button>
+        </div>
+        <input id="f-immun" type="text" placeholder="tetanus / rabies (Speeda) — course · booster · dates" maxlength="200" />
 
         <label class="lbl">Disposition</label>
         <select id="f-disposition">

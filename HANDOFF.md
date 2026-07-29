@@ -79,15 +79,15 @@ read-all, **write only `auth.uid === 'JwsZ2plG71R5zEdRv86T5FCuXFl2'`**.
   apply. Meanwhile hard-refresh / `?cb=` for live checks.
 
 ## Features (all live + verified)
-**Bedside:** patient tabs (own-first); structured vitals + O₂; U/D chips; **Home medication** field;
-**Immunization / vaccine** chips (Tetanus Td/Tdap/TIG, Rabies **Speeda** D0/D3/D7/D14/D28/booster/RIG);
+**Bedside:** patient tabs (own-first); structured vitals + O₂; U/D chips;
 Physical-exam builder (per-system type-or-pick + editable option lists `ex0..ex6`); **＋ Normal** exam;
 bedside test; **single Initial management box** (collapsed — orders + antibiotics + IV fluids) fed by:
 management chips + septic bundle, IV-fluid chips + specific-fluid `<select>`, and the **💊 Meds
 builder** (Common medication, Antibiotic, Vasopressor **with concentration**, IV-fluid loading,
 Nebulization). All builder pickers are native **`<select>`** (datalists misbehave on Samsung), all
 append into the management box, and every editable list supports **add / remove / reorder / rename (✎)**.
-Consult + disposition; send.
+Consult; then (discharge-side, just before disposition) **Home medication** field + **Immunization /
+vaccine** chips (Tetanus Td/Tdap/TIG, Rabies **Speeda** D0/D3/D7/D14/D28/booster/RIG); disposition; send.
 
 **Templates** (one ⚡ Templates panel: Quick + Mine + Dept):
 - **Quick** = data (`CONDITION_DEFAULTS`, macro field-fills). Editable per-user (`condOverrides`);
