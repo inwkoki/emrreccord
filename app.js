@@ -2618,6 +2618,192 @@ function makeRevBadge(key) {
 }
 
 // ---------------------------------------------------------------------------
+// Custom content — user's own note cards (editable bullets) and images (JPG)
+// appended to any reference section. Saved per-device in localStorage; images
+// are downscaled to keep within the storage quota. No login, works offline.
+// ---------------------------------------------------------------------------
+let refCustom = {};
+try { refCustom = JSON.parse(localStorage.getItem("edqc_refcustom") || "{}"); } catch {}
+function customList(key) { return refCustom[key] || (refCustom[key] = []); }
+function saveCustom() {
+  try {
+    localStorage.setItem("edqc_refcustom", JSON.stringify(refCustom));
+  } catch {
+    alert("Couldn't save — device storage is full. Delete an old note/image or use a smaller picture.");
+  }
+}
+const newId = () => "c" + Date.now() + Math.random().toString(36).slice(2, 6);
+
+// Read a picked image file, downscale to <=1400 px, return a JPEG data URL.
+function readAndCompressImage(file, cb) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 1400;
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      cb(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => alert("Could not read that image.");
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function buildCustomCard(key, item) {
+  const card = document.createElement("div");
+  card.className = "ha-card custom-card";
+  const head = document.createElement("div");
+  head.className = "ha-head";
+  const nm = document.createElement("span");
+  nm.className = "ha-name";
+  nm.textContent = item.title || (item.kind === "image" ? "Image" : "Note");
+  const tag = document.createElement("span");
+  tag.className = "ha-tag";
+  tag.textContent = "mine";
+  head.append(nm, tag);
+  card.appendChild(head);
+
+  if (item.kind === "image" && item.img) {
+    const img = document.createElement("img");
+    img.className = "custom-img";
+    img.src = item.img;
+    img.alt = item.title || "reference image";
+    card.appendChild(img);
+  } else {
+    const ul = document.createElement("ul");
+    ul.className = "ha-list";
+    (item.lines || []).forEach((t) => {
+      const li = document.createElement("li");
+      li.textContent = t;
+      ul.appendChild(li);
+    });
+    card.appendChild(ul);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "custom-actions";
+  const edit = document.createElement("button");
+  edit.type = "button";
+  edit.className = "chip mini";
+  edit.textContent = "✎ Edit";
+  edit.addEventListener("click", () => openEditor(key, item));
+  const del = document.createElement("button");
+  del.type = "button";
+  del.className = "chip mini";
+  del.textContent = "✕ Delete";
+  del.addEventListener("click", () => {
+    if (!confirm("Delete this " + (item.kind === "image" ? "image" : "note") + "?")) return;
+    refCustom[key] = customList(key).filter((x) => x.id !== item.id);
+    saveCustom();
+    renderCustomArea(key);
+  });
+  actions.append(edit, del);
+  card.appendChild(actions);
+  return card;
+}
+
+// Inline editor for a note (new or existing) or an image title.
+function openEditor(key, item) {
+  const area = $("calc-" + key).querySelector(".custom-area");
+  const old = area.querySelector(".custom-editor");
+  if (old) old.remove();
+  const isImage = item && item.kind === "image";
+  const form = document.createElement("div");
+  form.className = "custom-editor";
+  const titleIn = document.createElement("input");
+  titleIn.type = "text";
+  titleIn.placeholder = "Title (optional)";
+  titleIn.value = item ? item.title || "" : "";
+  form.appendChild(titleIn);
+  let ta = null;
+  if (!isImage) {
+    ta = document.createElement("textarea");
+    ta.rows = 5;
+    ta.placeholder = "One bullet per line…";
+    ta.value = item ? (item.lines || []).join("\n") : "";
+    form.appendChild(ta);
+  }
+  const save = document.createElement("button");
+  save.type = "button";
+  save.className = "chip";
+  save.textContent = item ? "Save changes" : "Add note";
+  save.addEventListener("click", () => {
+    const title = titleIn.value.trim();
+    const lines = ta ? ta.value.split("\n").map((s) => s.trim()).filter(Boolean) : null;
+    if (item) {
+      item.title = title;
+      if (ta) item.lines = lines;
+    } else {
+      if (!title && !(lines && lines.length)) { form.remove(); return; }
+      customList(key).push({ id: newId(), kind: "note", title, lines: lines || [] });
+    }
+    saveCustom();
+    renderCustomArea(key);
+  });
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "chip mini";
+  cancel.textContent = "Cancel";
+  cancel.addEventListener("click", () => form.remove());
+  form.append(save, cancel);
+  area.appendChild(form);
+  titleIn.focus();
+}
+
+function pickImage(key) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/jpeg,image/png,image/webp";
+  input.addEventListener("change", () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    readAndCompressImage(file, (dataUrl) => {
+      customList(key).push({ id: newId(), kind: "image", title: file.name.replace(/\.[^.]+$/, ""), img: dataUrl });
+      saveCustom();
+      renderCustomArea(key);
+    });
+  });
+  input.click();
+}
+
+// (Re)build the "My notes & images" area at the bottom of a section pane.
+function renderCustomArea(key) {
+  const pane = $("calc-" + key);
+  if (!pane) return;
+  const existing = pane.querySelector(".custom-area");
+  if (existing) existing.remove();
+  const area = document.createElement("div");
+  area.className = "custom-area";
+  const h = document.createElement("h4");
+  h.className = "pd-h";
+  h.textContent = "My notes & images (this device)";
+  area.appendChild(h);
+  customList(key).forEach((item) => area.appendChild(buildCustomCard(key, item)));
+  const bar = document.createElement("div");
+  bar.className = "custom-bar";
+  const addNote = document.createElement("button");
+  addNote.type = "button";
+  addNote.className = "chip";
+  addNote.textContent = "＋ Note";
+  addNote.addEventListener("click", () => openEditor(key, null));
+  const addImg = document.createElement("button");
+  addImg.type = "button";
+  addImg.className = "chip";
+  addImg.textContent = "＋ Image (JPG)";
+  addImg.addEventListener("click", () => pickImage(key));
+  bar.append(addNote, addImg);
+  area.appendChild(bar);
+  pane.appendChild(area);
+}
+
+// ---------------------------------------------------------------------------
 // Reference navigation: a section menu (table of contents) + section views.
 // Adding a new reference = add a pane in index.html + one entry here.
 // ---------------------------------------------------------------------------
@@ -2651,6 +2837,7 @@ function showCalcSection(key) {
   st.appendChild(makeRevBadge(key));
   SECTIONS.forEach((s) => $("calc-" + s.key).classList.toggle("hidden", s.key !== key));
   if (sec.lazy) sec.lazy();
+  renderCustomArea(key);
   document.querySelector(".bedside-body").scrollTop = 0;
 }
 
