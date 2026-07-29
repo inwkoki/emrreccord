@@ -249,7 +249,14 @@
           <input type="text" placeholder="Add your own order…" maxlength="60" autocomplete="off" />
           <button type="button" class="chip mini" data-additem="mgmt">＋ Add</button>
         </div>
-        <textarea id="f-management" rows="4" placeholder="Orders / interventions given…"></textarea>
+        <div class="chip-row" id="fluid-chips">
+          <span class="ud-label">IV fluid:</span>
+          <button type="button" class="chip mini" data-fluid="NSS 1000 ml IV">NSS</button>
+          <button type="button" class="chip mini" data-fluid="Acetar / RLS 1000 ml IV">RLS</button>
+          <button type="button" class="chip mini" data-fluid="NSS 30 ml/kg IV bolus, reassess">Bolus</button>
+          <select id="fluid-type"></select>
+        </div>
+        <textarea id="f-management" rows="6" placeholder="Orders · antibiotics · IV fluids · interventions given…"></textarea>
 
         <button type="button" id="meds-toggle" class="chip">💊 Meds builder</button>
         <div class="meds-builder hidden" id="meds-builder">
@@ -347,17 +354,6 @@
             </div>
           </div>
         </div>
-
-        <label class="lbl">Antibiotic given</label>
-        <input id="f-antibiotic" type="text" placeholder="drug · dose · route · time (per local protocol)" maxlength="200" />
-
-        <label class="lbl">IV fluid
-          <button type="button" class="chip mini" data-fluid="NSS 1000 ml IV">NSS</button>
-          <button type="button" class="chip mini" data-fluid="Acetar / RLS 1000 ml IV">RLS</button>
-          <button type="button" class="chip mini" data-fluid="NSS 30 ml/kg IV bolus, reassess">Bolus</button>
-        </label>
-        <select id="fluid-type"></select>
-        <input id="f-fluid" type="text" placeholder="fluid type · volume · rate" maxlength="120" />
 
         <label class="lbl">Consultation</label>
         <select id="f-consult">

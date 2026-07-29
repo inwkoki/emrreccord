@@ -85,8 +85,6 @@ const vTemp = $("v-temp");
 const vGcs = $("v-gcs");
 const fOxygen = $("f-oxygen");
 const fManagement = $("f-management");
-const fAntibiotic = $("f-antibiotic");
-const fFluid = $("f-fluid");
 const fHomemed = $("f-homemed");
 const fImmun = $("f-immun");
 const fConsult = $("f-consult");
@@ -662,8 +660,6 @@ const FIELD_MAP = {
   exam: fExam,
   bedside: fBedside,
   management: fManagement,
-  antibiotic: fAntibiotic,
-  fluid: fFluid,
   consult: fConsult,
   disposition: fDisposition,
 };
@@ -909,7 +905,7 @@ document.getElementById("exam-opt-input").addEventListener("keydown", (e) => {
 // can save "my febrile-neutropenia orders" etc. and re-apply with one tap.
 const TEMPLATE_FIELDS = [
   "complaint", "history", "vBp", "vHr", "vRr", "vSpo2", "vTemp", "vGcs",
-  "oxygen", "exam", "bedside", "management", "antibiotic", "fluid",
+  "oxygen", "exam", "bedside", "management",
   "consult", "disposition",
 ];
 let userTemplates = {};
@@ -990,12 +986,19 @@ function renderMyTemplates() {
   });
 }
 
+// Antibiotic/fluid used to be their own fields; they're now merged into the
+// single management box, so fold those template fields in there.
+function foldLegacyField(field, v) {
+  if (field === "fluid") appendText(fManagement, "- IV fluid: " + v);
+  else if (field === "antibiotic") appendText(fManagement, "- Antibiotic: " + v);
+}
+
 function applyTemplateObj(t) {
   if (!t || !t.fields) return;
   Object.entries(t.fields).forEach(([field, val]) => {
     const el = FIELD_MAP[field];
-    if (!el) return;
     const v = expandMacros(val); // resolve {{now+2h}} etc. at apply time
+    if (!el) return foldLegacyField(field, v);
     if (el.tagName === "TEXTAREA") appendText(el, v);
     else el.value = v;
   });
@@ -1304,8 +1307,7 @@ document.getElementById("abx-add").addEventListener("click", () => {
   const dose = document.getElementById("abx-dose").value.trim();
   const route = document.getElementById("abx-route").value;
   const line = drug + (dose ? " " + dose : "") + " " + route + " @ " + nowTime();
-  const cur = fAntibiotic.value.trim();
-  fAntibiotic.value = cur ? cur + "; " + line : line;
+  appendText(fManagement, "- Antibiotic: " + line);
   document.getElementById("abx-drug").value = "";
   document.getElementById("abx-dose").value = "";
 });
@@ -1363,10 +1365,8 @@ FLUID_OPTIONS.forEach((name) => {
 fluidTypeSel.addEventListener("change", () => {
   const v = fluidTypeSel.value;
   if (!v) return;
-  const cur = fFluid.value.trim();
-  fFluid.value = cur ? cur + "; " + v + " " : v + " ";
+  appendText(fManagement, "- IV fluid: " + v);
   fluidTypeSel.value = "";
-  fFluid.focus();
 });
 
 // Common medication → append to management (drug · dose · route · time)
@@ -1396,8 +1396,7 @@ document.getElementById("load-add").addEventListener("click", () => {
   const min = document.getElementById("load-min").value.trim();
   if (!vol) return;
   const line = fluid + " " + vol + " ml IV load" + (min ? " over " + min + " min" : "");
-  const cur = fFluid.value.trim();
-  fFluid.value = cur ? cur + "; " + line : line;
+  appendText(fManagement, "- IV fluid: " + line);
   document.getElementById("load-vol").value = "";
   document.getElementById("load-min").value = "";
 });
@@ -1626,132 +1625,12 @@ document.querySelectorAll("[data-mgmt-set='septic']").forEach((btn) => {
   });
 });
 
-// IV-fluid quick chips.
+// IV-fluid quick chips → append into the single management box.
 document.querySelectorAll("[data-fluid]").forEach((btn) => {
   btn.addEventListener("click", () => {
-    fFluid.value = btn.dataset.fluid;
+    appendText(fManagement, "- IV fluid: " + btn.dataset.fluid);
   });
 });
-
-// --- Condition templates (sepsis / stroke / trauma) ---------------------
-const CONDITION_TEMPLATES = {
-  sepsis: () => {
-    document.querySelector("[data-mgmt-set='septic']").click();
-    if (!fFluid.value.trim()) fFluid.value = "NSS/RLS 30 ml/kg IV bolus, reassess";
-    if (!fOxygen.value) fOxygen.value = "Nasal cannula";
-    fAntibiotic.focus(); // prompt clinician to record the antibiotic given
-  },
-  chestpain: () => {
-    const t = nowTime();
-    appendText(
-      fBedside,
-      [
-        "[Serial ECG]",
-        "ECG #1 (" + t + "): rate/rhythm ___ , axis ___ , ST-segment ___ , T-wave ___",
-        "ECG #2 (____): rate/rhythm ___ , ST-segment ___ (compare to #1)",
-        "ECG #3 (____): ___",
-      ].join("\n")
-    );
-    appendText(
-      fManagement,
-      [
-        "[Chest pain / ACS work-up]",
-        "- 12-lead ECG within 10 min of arrival; serial ECG (see bedside test)",
-        "- Cardiac troponin (serial) + CBC, BUN/Cr, electrolytes, coagulogram",
-        "- Continuous cardiac monitor + SpO2; IV access",
-        "- ASA (if not contraindicated); analgesia; consider GTN",
-        "- CXR; risk-stratify (e.g. HEART score)",
-      ].join("\n")
-    );
-  },
-  anaphylaxis: () => {
-    const t = nowTime();
-    const until = timePlusHours(2);
-    appendText(
-      fManagement,
-      [
-        "[Anaphylaxis]",
-        "- Epinephrine 1:1000 0.5 ml IM anterolateral thigh (given " + t + ")",
-        "- Remove trigger; high-flow O2; lay supine with legs raised",
-        "- IV access; IV fluid bolus",
-        "- CPM 10 mg IV stat",
-        "- Dexamethasone 8 mg IV stat",
-        "- Observe for at least 2 hours (until " + until + ")",
-        "- Repeat epinephrine every 5-15 min if no improvement",
-      ].join("\n")
-    );
-    if (!fFluid.value.trim()) fFluid.value = "NSS IV bolus";
-    if (!fOxygen.value) fOxygen.value = "Non-rebreather mask";
-  },
-  stroke: () => {
-    appendText(
-      fExam,
-      [
-        "[Stroke / neuro assessment]",
-        "Last known well: ___    Onset: ___",
-        "GCS: E_V_M_    Pupils: R__ L__",
-        "NIHSS total: ___",
-        "- LOC / orientation / commands: ___",
-        "- Best gaze / visual fields: ___",
-        "- Facial palsy: ___",
-        "- Motor arm   R: ___   L: ___",
-        "- Motor leg   R: ___   L: ___",
-        "- Limb ataxia: ___",
-        "- Sensory: ___",
-        "- Language / dysarthria: ___",
-        "- Extinction / neglect: ___",
-        "Capillary blood glucose: ___",
-      ].join("\n")
-    );
-    appendText(
-      fManagement,
-      [
-        "[Stroke fast-track]",
-        "- NPO; head of bed 30°",
-        "- CT brain non-contrast STAT (± CTA)",
-        "- Capillary glucose; correct if abnormal",
-        "- BP monitoring (avoid over-correction)",
-        "- Screen thrombolysis / thrombectomy eligibility",
-        "- Notify stroke team; document onset/LKW time",
-      ].join("\n")
-    );
-  },
-  trauma: () => {
-    const t = nowTime();
-    appendText(
-      fExam,
-      [
-        "[Primary survey — ABCDE]",
-        "A (airway + C-spine control): ___",
-        "B (breathing, RR, chest, SpO2): ___",
-        "C (circulation, pulses, external bleeding): ___",
-        "D (disability, GCS __, pupils R__ L__): ___",
-        "E (exposure, temp, log-roll / back): ___",
-        "",
-        "[EFAST]",
-        "- Pericardial: ___",
-        "- RUQ (Morison's pouch): ___",
-        "- LUQ (splenorenal): ___",
-        "- Pelvis / pouch of Douglas: ___",
-        "- Lung sliding   R: ___   L: ___",
-        "",
-        "[Secondary survey / AMPLE Hx]: ___",
-      ].join("\n")
-    );
-    appendText(
-      fManagement,
-      [
-        "[Trauma resuscitation]",
-        "- Time of arrival: " + t + "   Primary survey: " + t,
-        "- 2 large-bore IV; trauma labs + group & cross-match",
-        "- Control external hemorrhage; C-collar / immobilization",
-        "- Analgesia; tetanus prophylaxis as indicated",
-        "- Imaging: trauma series / CT as indicated",
-        "- Activate massive transfusion protocol if needed",
-      ].join("\n")
-    );
-  },
-};
 
 // Quick (condition) templates. Each has editable field-fill defaults (with
 // {{now}} / {{now+2h}} macros for dynamic times). Users can edit the wording
@@ -1803,7 +1682,7 @@ function getCond(key) {
 function loadFieldsRaw(fields) {
   Object.entries(fields || {}).forEach(([field, val]) => {
     const el = FIELD_MAP[field];
-    if (!el) return;
+    if (!el) return foldLegacyField(field, val);
     if (el.tagName === "TEXTAREA") appendText(el, val);
     else el.value = val;
   });

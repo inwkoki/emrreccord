@@ -3,112 +3,148 @@
 Continuity note for resuming work in a fresh chat. Read this + the code to get up to speed.
 
 ## What this is
-A real-time **Emergency Department documentation web app**: nurses/doctors type at the
-**bedside (phone)**, it appears live at the **station (computer)**, formatted for one-click
-copy into the hospital EMR — no retyping. Plus a dedicated **CPR/resuscitation record**.
+A real-time **Emergency Department documentation web app**: staff type at the **bedside (phone)**,
+it appears live at the **station (computer)**, formatted for one-click copy into the hospital EMR —
+no retyping. Plus a **CPR/resuscitation record** and a large offline **clinical reference & tools**
+library (drug calculators, ACLS/PALS, peds, etc.).
 
 - **Repo:** https://github.com/inwkoki/emrreccord (branch `main`)
 - **Live:** https://emrreccord.onrender.com/  (Render **static site**, auto-deploys on push to `main`)
 - **Owner GitHub:** `inwkoki` (gh CLI is authenticated as this)
 
 ## Stack / architecture
-- **Vanilla HTML/CSS/JS** (ES modules), **no build step**. Files: `index.html`, `styles.css`,
-  `app.js`, `firebase-config.js`, `database.rules.json`, `firebase.json`, `render.yaml`.
-- **Firebase Realtime Database** + **Email/Password Auth**. Firebase project: **`emrtemplate`**
-  (RTDB region **asia-southeast1**). Web config is in `firebase-config.js` (public keys — fine to commit).
+- **Vanilla HTML/CSS/JS** (ES modules), **no build step**.
+- Files: `index.html`, `styles.css`, `app.js` (~2600 lines: logic + UI),
+  **`reference-data.js`** (pure clinical reference DATA, ES module imported by app.js),
+  `firebase-config.js`, `database.rules.json`, `firebase.json`, `render.yaml`,
+  **`sw.js`** (service worker / offline), **`manifest.json`** + **`icon.svg`** (installable PWA).
+- **Firebase Realtime Database** + **Email/Password Auth**. Project **`emrtemplate`** (RTDB
+  **asia-southeast1**). Web config in `firebase-config.js` (public keys — fine to commit).
 - Firebase SDK loaded from gstatic CDN inside `app.js`.
 
 ## Auth model (important)
-- Login is **username + PIN**. Internally: email = `username@edqc.app` (lowercased),
-  password = `PIN + "#EDqc"` (pepper, to meet Firebase's 6-char min). See `emailFor`/`passwordFor`.
+- Login is **username + PIN**. Internally email = `username@edqc.app` (lowercased),
+  password = `PIN + "#EDqc"`. See `emailFor`/`passwordFor`.
 - **Accounts:**
-  - `ponkrit` / PIN `2486` — the real user (display name "Koki").
-  - `demodoc` / PIN `1234` — my test account (display "Dr. Demo"). Has leftover test chips/templates
-    (per-user, so they do NOT show in ponkrit's view).
-- No real emails → **no self-service reset when fully locked out**; owner resets in the Firebase
-  console (Authentication → user → Reset password). Signed-in users can change PIN in ⚙️ Account.
+  - `ponkrit` / PIN `2486` — the real user / **ADMIN** (display "Koki").
+    **uid `JwsZ2plG71R5zEdRv86T5FCuXFl2`** — hardcoded as `ADMIN_UID` in app.js and in the
+    `sharedCondOverrides` rule.
+  - `demodoc` / PIN `1234` — test account (display "Dr. Demo"), uid `53UzKvZmAQeocwC2hgxxpFucA5Z2`.
+- No real emails → no self-service reset when fully locked out; owner resets in the Firebase console
+  (Authentication → user → Reset password). Signed-in users can change PIN in ⚙️ Account.
+- **I never enter the PIN to log into the live app** (credential policy). Live auth'd tests are the
+  user's to run; I verify logic locally + confirm rules/deploys.
 
 ## Data model (RTDB)
-- `/encounters/{id}` (shared dept board): `bed, complaint, history, vBp,vHr,vRr,vSpo2,vTemp,vGcs,
-  oxygen, exam, bedside, management, antibiotic, fluid, consult, disposition, by, byUid,
-  status('active'|'recorded'), createdAt, updatedAt, cpr(text), cprState(JSON)`.
-- `/users/{uid}`: `username, displayName, createdAt, normalPe` (editable "＋ Normal" exam),
-  `condOverrides/{condKey}: {fields{}}` (user-edited wording for the built-in quick templates),
-  `chips/{group}` (arrays; groups: `ud, mgmt, abx, vaso, fluidtypes, neb`, `ex0..ex6`
-  (exam-builder per-system custom options), `hiddenQt` (hidden quick templates)),
-  `templates/{tid}: {name, fields{}, order}`.
-- `/sharedTemplates/{tid}`: `{name, fields{}, by, byUid}` (dept templates; creator-only write/delete).
-- Rule limits (all in `database.rules.json`): chips item ≤200, template/shared/cond fields ≤8000,
-  name ≤40, normalPe ≤4000, encounter cpr/cprState ≤20000, encounter $other string ≤8000.
+- `/encounters/{id}` (shared dept board): `bed, complaint, history, homemed, immun,
+  vBp,vHr,vRr,vSpo2,vTemp,vGcs, oxygen, exam, bedside, management, consult, disposition,
+  by, byUid, status('active'|'recorded'), createdAt, updatedAt, cpr(text), cprState(JSON)`.
+  - **`management` is now the single "Initial management" box** — orders **plus antibiotics plus
+    IV fluids** all live here (collapsed). The old separate `antibiotic`/`fluid` fields are
+    **legacy**: not written by new records, but old records may still have them and `formatNote`
+    still renders them if present.
+- `/users/{uid}`: `username, displayName, createdAt, normalPe`, `condOverrides/{key}:{fields{}}`
+  (personal quick-template edits), `chips/{group}` (arrays; groups: `ud, mgmt, abx, vaso,
+  fluidtypes, neb, commonmed`, `ex0..ex6` exam-builder options, `hiddenQt`),
+  `templates/{tid}:{name,fields{},order}`.
+- `/sharedTemplates/{tid}`: `{name,fields{},by,byUid}` — dept templates, creator-only write/delete.
+- `/sharedCondOverrides/{key}`: `{fields{},by,byUid}` — **dept-wide (global) overrides of the
+  built-in quick templates. Read by all; write ADMIN-ONLY (owner uid).**
+- Rule limits (`database.rules.json`): chips item ≤200; template/shared/cond fields ≤8000; name ≤40;
+  normalPe ≤4000; encounter cpr/cprState ≤20000; encounter $other string ≤8000.
 
-## Security rules — HOW TO DEPLOY THEM (gotcha!)
-`database.rules.json` is the **source of truth** but is **NOT auto-deployed**. There's no Firebase
-CLI login here. **Rules are published manually in the Firebase console via Claude-in-Chrome:**
+## Security rules — model + HOW TO DEPLOY (gotcha!)
+Model: `users/$uid` read+write owner-only. `encounters` shared board (any signed-in read/create/
+update) but `.write` lives on `$id` with `newData.exists()` so **deletes are denied** (clear via
+status `recorded`); `byUid` must `=== auth.uid`. `sharedTemplates` creator-only. `sharedCondOverrides`
+read-all, **write only `auth.uid === 'JwsZ2plG71R5zEdRv86T5FCuXFl2'`**.
+
+`database.rules.json` is the **source of truth** but is **NOT auto-deployed** (no Firebase CLI here).
+**Publish manually in the Firebase console via Claude-in-Chrome:**
 1. Open `https://console.firebase.google.com/project/emrtemplate/database/emrtemplate-default-rtdb/rules`
-2. Set the CodeMirror value via JS: `document.querySelector('.CodeMirror').CodeMirror.setValue(JSON.stringify(rules,null,2))`
-3. Click **Publish** (button ~coord [611,133]); confirm the "unpublished changes" banner disappears
-   (sometimes needs 2 clicks; navigating away triggers a "Leave site?" dialog if not published).
+2. Set the editor value (rules file has `//` comments, so **base64-inject** to avoid escaping):
+   `base64 -w0 database.rules.json` → in page:
+   `const bytes=Uint8Array.from(atob(B64),c=>c.charCodeAt(0)); document.querySelector('.CodeMirror').CodeMirror.setValue(new TextDecoder().decode(bytes))`
+3. Click **Publish** (~coord `[611,133]`); confirm the "unpublished changes" banner disappears.
 
-**Any rules change in `database.rules.json` MUST be republished this way or writes get PERMISSION_DENIED.**
+**Any rules change MUST be republished this way or writes get PERMISSION_DENIED.**
 
-## Features built (all live + verified)
-- Screens: **auth → role picker → bedside / station / cpr**, plus **⚙️ Account** modal.
-- **Bedside:** tappable patient tabs (own-first); **structured vitals** + O₂; **U/D chips**
-  (editable per user); **Physical exam builder** — each system is a type-or-pick combobox with a
-  per-field ✕ clear + a global 🧹 Clear + **✏️ Edit lists** to add/remove dropdown options per
-  system (stored in `chips/ex0..ex6`); **＋ Normal** uses per-user editable Normal PE; bedside test;
-  **Initial management** chips + septic-workup bundle (editable); **💊 Meds builder** — antibiotic
-  (searchable input+datalist, editable list), vasopressor / IV-fluid-loading / nebulization
-  (all editable per-user lists); consult + disposition; send.
-- **Templates (one collapsible ⚡ Templates panel):** combines **Quick** (condition presets),
-  **Mine**, and **Dept**. Header = **⚡ Templates** (collapse) · **＋ New** (create) · **✏️**
-  (edit toggle → button flips to **✓ Done**, amber panel highlight + hint banner as the editing
-  indicator).
-  - **Quick templates** (Sepsis, Chest pain, Anaphylaxis [observe {{now+2h}}], Stroke, Trauma) are
-    now DATA (`CONDITION_DEFAULTS`, field-fills with macros), not the old imperative
-    `CONDITION_TEMPLATES` (which is now dead code). In edit mode each has **✎ edit wording**
-    (loads raw fields → "Save changes" writes `condOverrides/{key}`; edited ones show a ✎ marker;
-    **↺ Reset to default** removes the override), plus **✕ hide / ↺ restore** (via `chips/hiddenQt`).
-  - **Mine / Dept:** save / apply / **✎ edit in place** / **▲▼ reorder** / delete;
-    **Share with dept** (creator-only edit/delete). **Emoji picker** in the editor prepends a
-    medical icon to the name.
-  - **Auto-time macros** `{{now}}, {{now+2h}}, {{now+30m}}, {{now-1h}}, {{date}}, {{datetime}}` —
-    `expandMacros` on apply; `loadFieldsRaw` keeps them unexpanded while editing.
-- **Station:** live board (own-first + "mine" tag, flashes on update); detail note (`formatNote`
-  composes vitals/exam/mgmt/meds/consult/dispo + full **CPR record**); **📋 Copy for EMR**;
-  **✓ Mark recorded**.
-- **CPR screen** (🫀 from bedside): detailed resuscitation record (~94 inputs) modeled on a real
-  case; saves `cpr` (readable) + `cprState` (JSON for round-trip repopulate).
-- **⚙️ Account:** change display name (updateProfile + /users/uid/displayName), change PIN
-  (reauth + updatePassword), forgot-PIN explainer, edit **Normal physical exam** (/users/uid/normalPe).
+## Deploy + cache
+- Push to `main` → Render auto-deploys (~30–90 s; occasionally the CDN lags a minute). Verify with
+  a wait loop: `until curl -s ".../app.js?cb=$(date +%s%N)" | grep -q MARKER; do sleep 5; done`.
+- **Service worker cache:** on ANY shell change (html/css/app.js/reference-data.js/manifest/icon),
+  **bump `const CACHE = "edqc-vN"` in `sw.js`** so users' caches refresh cleanly. Currently `edqc-v13`.
+- `render.yaml` sets `Cache-Control: no-cache`, but Render still serves `max-age=0, s-maxage=300`
+  (CDN 5-min) — the header change needs a **Blueprint re-sync in the Render dashboard** to fully
+  apply. Meanwhile hard-refresh / `?cb=` for live checks.
+
+## Features (all live + verified)
+**Bedside:** patient tabs (own-first); structured vitals + O₂; U/D chips; **Home medication** field;
+**Immunization / vaccine** chips (Tetanus Td/Tdap/TIG, Rabies **Speeda** D0/D3/D7/D14/D28/booster/RIG);
+Physical-exam builder (per-system type-or-pick + editable option lists `ex0..ex6`); **＋ Normal** exam;
+bedside test; **single Initial management box** (collapsed — orders + antibiotics + IV fluids) fed by:
+management chips + septic bundle, IV-fluid chips + specific-fluid `<select>`, and the **💊 Meds
+builder** (Common medication, Antibiotic, Vasopressor **with concentration**, IV-fluid loading,
+Nebulization). All builder pickers are native **`<select>`** (datalists misbehave on Samsung), all
+append into the management box, and every editable list supports **add / remove / reorder / rename (✎)**.
+Consult + disposition; send.
+
+**Templates** (one ⚡ Templates panel: Quick + Mine + Dept):
+- **Quick** = data (`CONDITION_DEFAULTS`, macro field-fills). Editable per-user (`condOverrides`);
+  **admin sees "Apply to everyone (dept)"** → writes `/sharedCondOverrides` (global). Wording
+  resolves **personal → dept(global) → built-in default** (`getCond`). ✎ marks any override.
+- **Mine / Dept:** save / apply / edit / reorder / delete; Dept share creator-only; emoji picker.
+- **Macros** `{{now}},{{now+2h}},{{now+30m}},{{now-1h}},{{date}},{{datetime}}` (`expandMacros`).
+
+**Station:** live board (own-first + flash); `formatNote` composes the EMR note; 📋 Copy; ✓ Mark recorded.
+**CPR screen** (🫀): detailed resus record; saves `cpr` (text) + `cprState` (JSON round-trip).
+**⚙️ Account:** change name / PIN / Normal-PE.
+
+**📚 Reference & tools hub** (📚 Ref button, both roles) — `#calc-screen`: a **grouped menu**
+(`SECTION_GROUPS` = Adult · Paediatric · General & drugs) + a **search box** (`buildSearchIndex`
+indexes every dataset). Each section has an editable **review-status badge** (⚠ Needs review → ✓
+Reviewed → ✔ Validated, saved per-device in `localStorage.edqc_refreview`) and a **"My notes &
+images"** area — add/edit/delete note cards + attach JPG/PNG (auto-downscaled), saved per-device in
+`localStorage.edqc_refcustom`. Sections:
+- **Adult codes (ACLS)** + **Peds codes (PALS)** — cardiac-arrest **flowchart** (`buildFlow`) +
+  brady/tachy/cardioversion detail cards (AHA/AAP 2025 facts).
+- **Peds by weight** — enter weight → resus doses + fluids + 4-2-1 maintenance (calc).
+- **Ped head trauma** — PECARN CT rule, ≥2 yr and <2 yr (CA-ACEP / Choosing Wisely).
+- **Peds drug doses** — ~50 common drugs, category filter (KKU/Srinagarind peds handbook).
+- **Peds vital signs** — HR/RR/hypotension-SBP/ETT tables (Pediatric Survival Guide).
+- **Peds by age** — IBW/height/ETT (cuffed+uncuffed)+depth computed by age.
+- **Adult mild TBI** — Thai CPG risk groups.
+- **Drip calculator** — KKU-aligned inotrope/vasopressor rate⇄dose, "⬇ To management".
+- **High-alert drugs** — KKU injectable guideline cards (link to source PDFs).
+- **RSI drugs** · **Electrolyte correction** (K/Ca/Mg/Na/glucose + hyperK).
+Data all in `reference-data.js`. Renderers: `renderCard` (card sections), `buildRefTable` (tables),
+`buildFlow` (flowcharts). **Add a section = data in reference-data.js + a `SECTIONS` entry (with
+`group`) + a pane in index.html; card sections reuse `renderCard`; add to `buildSearchIndex`.**
 
 ## Dev workflow
-- **Local test:** `cd emrreccord && python -m http.server 8765`, open `http://localhost:8765`.
-  Firebase session persists across reloads. Sign in as `demodoc`/`1234`.
-- **Testing via browser tools:** I drive the in-app Browser (`mcp__Claude_Browser__*`) with
-  `javascript_tool` to fill/click/read state (fast). Fill BOTH username+pin fields; use
-  `auth-submit.click()`.
-- **Deploy:** commit + push to `main` → Render auto-deploys (~20–60s). Verify with
-  `curl -s https://emrreccord.onrender.com/app.js | grep -c <marker>`.
-- **CACHE GOTCHA:** Render/browser cache aggressively. After deploy, **hard-refresh**
-  (`Ctrl+Shift+R`) or append `?v=x` to the URL, or your live check will see the OLD build.
+- **Local test:** `python -m http.server 8765` in the repo; open `http://localhost:8765`. To test
+  UI without login, reveal a screen via JS (`document.getElementById('bedside-screen').classList
+  .remove('hidden')`) — most bedside/reference logic doesn't need auth.
+- **Browser tools:** drive the in-app Browser (`mcp__Claude_Browser__*`) with `javascript_tool` to
+  fill/click/read; `read_console_messages{onlyErrors:true}` to check for errors.
+- `node --check` a copy (`cp app.js x.mjs`) before committing; validate rules JSON after stripping
+  `//` comments.
 - **Commits** end with the Claude co-author trailer.
 
 ## Open items / offered-but-not-built
-- Add **cache-control headers** to `render.yaml` to kill the stale-cache-after-deploy problem (user
-  keeps needing hard-refresh). Small, safe — offered, awaiting yes.
-- **Thai word-spacing button**: voice-to-text produces Thai with no spaces (grammatically fine but
-  dense). Proposed a lightweight button using native `Intl.Segmenter('th',{granularity:'word'})` to
-  insert spaces at word boundaries. Offered, awaiting yes.
-- Dead code to optionally remove: the old imperative `CONDITION_TEMPLATES` object (quick templates
-  now run off `CONDITION_DEFAULTS` data).
-
-_(Done since first HANDOFF: macros; editable Normal PE; CPR record; ⚙️ Account (name/PIN change,
-forgot-PIN); consolidated collapsible templates panel with clear editing indicator; hideable +
-wording-editable quick templates via condOverrides; emoji picker; editable exam-builder dropdown
-options + per-field clear; Save→＋ New rename.)_
+- **render.yaml Cache-Control** committed as `no-cache` but needs a Render **Blueprint re-sync** to
+  override the CDN `s-maxage=300`. (Live checks still need `?cb=`.)
+- **Per-device state → Firebase sync:** review badges + custom notes/images are `localStorage`
+  (per-device). Could move to `/users/{uid}/…` for cross-device (needs a rules addition + republish).
+- **Multiple admins:** `sharedCondOverrides` write is a single hardcoded uid; switch to an allowlist
+  or a `users/{uid}/admin` flag if more editors are needed.
+- **Thai word-spacing** button (voice-to-text produces spaceless Thai) via `Intl.Segmenter('th')` —
+  offered, not built.
+- **Clinical data still to verify** (transcribed from user-supplied PDFs/images): the **Peds drug
+  doses**, **Peds-by-weight/electrolyte** values, and the **<2 yr PECARN** arm most of all.
 
 ## Honest constraints
 Prototype — **NOT** a certified/HIPAA/PDPA-compliant EMR. `/encounters` is a shared board readable/
-writable by any authenticated user. PIN is convenience-grade. Real clinical use needs proper auth,
-per-department scoping, audit logging, encryption, and institutional/legal sign-off.
+writable by any authenticated user. PIN is convenience-grade. Reference doses are decision aids to be
+verified against local protocol. Real clinical use needs proper auth, per-department scoping, audit
+logging, encryption, and institutional/legal sign-off.
