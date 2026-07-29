@@ -134,6 +134,9 @@ let chipsSubscribed = false;
 let customNormalPe = ""; // per-user editable "Normal" physical-exam text
 let condOverrides = {}; // per-user edited wording for quick (condition) templates
 let sharedCond = {}; // dept-wide (global) quick-template overrides — apply to everyone
+// Only this account (owner) may edit the dept-wide quick templates. Must match
+// the sharedCondOverrides .write rule in database.rules.json.
+const ADMIN_UID = "JwsZ2plG71R5zEdRv86T5FCuXFl2";
 
 // ---------------------------------------------------------------------------
 // Firebase init + config guard
@@ -1074,15 +1077,15 @@ function resetTemplateEditor() {
 document.getElementById("tpl-reset").addEventListener("click", () => {
   if (editingTemplate && editingTemplate.condKey) {
     const dept = document.getElementById("tpl-share").checked;
+    const label = editingTemplate.label;
     const path = dept
       ? "sharedCondOverrides/" + editingTemplate.condKey
       : "users/" + uid + "/condOverrides/" + editingTemplate.condKey;
-    set(ref(db, path), null).catch((e) => console.error("reset cond", e));
-    setStatus(
-      bedsideStatus,
-      "Reset “" + editingTemplate.label + "” to default" + (dept ? " for everyone." : " (for you)."),
-      "ok"
-    );
+    set(ref(db, path), null)
+      .then(() =>
+        setStatus(bedsideStatus, "Reset “" + label + "” to default" + (dept ? " for everyone." : " (for you)."), "ok")
+      )
+      .catch((e) => setStatus(bedsideStatus, "Couldn't reset globally: " + (e.code || e.message), "error"));
   }
   clearForm();
   resetTemplateEditor();
@@ -1122,10 +1125,10 @@ function saveTemplate() {
   if (editingTemplate && editingTemplate.condKey) {
     const dept = document.getElementById("tpl-share").checked;
     if (dept) {
-      set(ref(db, "sharedCondOverrides/" + editingTemplate.condKey), { fields, by: clinician, byUid: uid }).catch((e) =>
-        console.error("save shared cond", e)
-      );
-      setStatus(bedsideStatus, "Saved “" + editingTemplate.label + "” for everyone (dept).", "ok");
+      const label = editingTemplate.label;
+      set(ref(db, "sharedCondOverrides/" + editingTemplate.condKey), { fields, by: clinician, byUid: uid })
+        .then(() => setStatus(bedsideStatus, "Saved “" + label + "” for everyone (dept).", "ok"))
+        .catch((e) => setStatus(bedsideStatus, "Couldn't save globally: " + (e.code || e.message), "error"));
     } else {
       set(ref(db, "users/" + uid + "/condOverrides/" + editingTemplate.condKey), { fields }).catch((e) =>
         console.error("save cond override", e)
@@ -1818,15 +1821,29 @@ function loadCondForEdit(key, label) {
   ed.classList.remove("hidden");
   document.getElementById("macro-hint").classList.remove("hidden");
   document.getElementById("tpl-name").classList.add("hidden");
-  // Reuse the share checkbox as the scope: personal vs dept-wide (everyone).
-  document.querySelector("#save-template-editor .share-label").classList.remove("hidden");
-  document.getElementById("tpl-share-label").textContent = "Apply to everyone (dept)";
+  // The "Apply to everyone (dept)" scope is only offered to the admin (owner);
+  // other users can still edit their own copy.
+  const isAdmin = uid === ADMIN_UID;
+  const shareLabel = document.querySelector("#save-template-editor .share-label");
   const shareCb = document.getElementById("tpl-share");
-  shareCb.disabled = false;
-  shareCb.checked = !!sharedCond[key]; // if a dept override exists, keep editing it
+  if (isAdmin) {
+    shareLabel.classList.remove("hidden");
+    document.getElementById("tpl-share-label").textContent = "Apply to everyone (dept)";
+    shareCb.disabled = false;
+    shareCb.checked = !!sharedCond[key]; // if a dept override exists, keep editing it
+  } else {
+    shareLabel.classList.add("hidden");
+    shareCb.checked = false;
+  }
   document.getElementById("tpl-reset").classList.remove("hidden");
   document.getElementById("tpl-save-confirm").textContent = "Save changes to " + label;
-  setStatus(bedsideStatus, "Editing “" + label + "” — tick “Apply to everyone” to change it for all users, then Save.", "ok");
+  setStatus(
+    bedsideStatus,
+    isAdmin
+      ? "Editing “" + label + "” — tick “Apply to everyone” to change it for all users, then Save."
+      : "Editing “" + label + "” for you — edit the fields, then Save.",
+    "ok"
+  );
 }
 
 function renderQuickTemplates() {

@@ -73,9 +73,9 @@
     },
     "sharedCondOverrides": {
       // Dept-wide overrides for the built-in quick (condition) templates.
-      // Any signed-in staff can edit them for everyone (matches the shared board).
+      // Everyone reads them; only the admin (owner) may edit them for everyone.
       ".read": "auth != null",
-      ".write": "auth != null",
+      ".write": "auth.uid === 'JwsZ2plG71R5zEdRv86T5FCuXFl2'",
       "$key": {
         "fields": {
           "$f": { ".validate": "newData.isString() && newData.val().length <= 8000" }
