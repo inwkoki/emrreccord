@@ -133,6 +133,7 @@ let customChips = {
 let chipsSubscribed = false;
 let customNormalPe = ""; // per-user editable "Normal" physical-exam text
 let condOverrides = {}; // per-user edited wording for quick (condition) templates
+let sharedCond = {}; // dept-wide (global) quick-template overrides — apply to everyone
 
 // ---------------------------------------------------------------------------
 // Firebase init + config guard
@@ -534,6 +535,7 @@ onAuthStateChanged(auth, (user) => {
     subscribeCustomChips();
     subscribeUserTemplates();
     subscribeDeptTemplates();
+    subscribeSharedCond();
     if (role === "bedside" || role === "station") {
       showRole();
     } else {
@@ -1014,6 +1016,17 @@ function subscribeDeptTemplates() {
   });
 }
 
+// Dept-wide (global) quick-template overrides — shared by everyone.
+let sharedCondSubscribed = false;
+function subscribeSharedCond() {
+  if (sharedCondSubscribed || !db) return;
+  sharedCondSubscribed = true;
+  onValue(ref(db, "sharedCondOverrides"), (snap) => {
+    sharedCond = snap.val() || {};
+    renderQuickTemplates();
+  });
+}
+
 function renderDeptTemplates() {
   deptTemplatesEl.innerHTML = "";
   Object.entries(deptTemplates).forEach(([tid, t]) => {
@@ -1050,6 +1063,7 @@ function resetTemplateEditor() {
   shareCb.checked = false;
   shareCb.disabled = false;
   document.querySelector("#save-template-editor .share-label").classList.remove("hidden");
+  document.getElementById("tpl-share-label").textContent = "Share with dept";
   document.getElementById("tpl-reset").classList.add("hidden");
   document.getElementById("tpl-save-confirm").textContent = "Save template";
   document.getElementById("save-template-editor").classList.add("hidden");
@@ -1059,10 +1073,16 @@ function resetTemplateEditor() {
 // Reset a quick template's wording back to the built-in default.
 document.getElementById("tpl-reset").addEventListener("click", () => {
   if (editingTemplate && editingTemplate.condKey) {
-    set(ref(db, "users/" + uid + "/condOverrides/" + editingTemplate.condKey), null).catch((e) =>
-      console.error("reset cond", e)
+    const dept = document.getElementById("tpl-share").checked;
+    const path = dept
+      ? "sharedCondOverrides/" + editingTemplate.condKey
+      : "users/" + uid + "/condOverrides/" + editingTemplate.condKey;
+    set(ref(db, path), null).catch((e) => console.error("reset cond", e));
+    setStatus(
+      bedsideStatus,
+      "Reset “" + editingTemplate.label + "” to default" + (dept ? " for everyone." : " (for you)."),
+      "ok"
     );
-    setStatus(bedsideStatus, "Reset “" + editingTemplate.label + "” to default.", "ok");
   }
   clearForm();
   resetTemplateEditor();
@@ -1097,12 +1117,21 @@ function saveTemplate() {
     if (v) fields[f] = v;
   });
 
-  // Editing a quick (condition) template's wording → save as an override.
+  // Editing a quick (condition) template's wording → save as an override,
+  // either just for me or dept-wide (global, applies to everyone).
   if (editingTemplate && editingTemplate.condKey) {
-    set(ref(db, "users/" + uid + "/condOverrides/" + editingTemplate.condKey), { fields }).catch((e) =>
-      console.error("save cond override", e)
-    );
-    setStatus(bedsideStatus, "Saved changes to “" + editingTemplate.label + "”.", "ok");
+    const dept = document.getElementById("tpl-share").checked;
+    if (dept) {
+      set(ref(db, "sharedCondOverrides/" + editingTemplate.condKey), { fields, by: clinician, byUid: uid }).catch((e) =>
+        console.error("save shared cond", e)
+      );
+      setStatus(bedsideStatus, "Saved “" + editingTemplate.label + "” for everyone (dept).", "ok");
+    } else {
+      set(ref(db, "users/" + uid + "/condOverrides/" + editingTemplate.condKey), { fields }).catch((e) =>
+        console.error("save cond override", e)
+      );
+      setStatus(bedsideStatus, "Saved changes to “" + editingTemplate.label + "” (for you).", "ok");
+    }
     clearForm();
     resetTemplateEditor();
     return;
@@ -1758,8 +1787,13 @@ const CONDITION_DEFAULTS = {
 };
 
 // Current fields for a condition = the user's override if present, else default.
+// Effective wording: your personal override → dept (global) override → built-in.
 function getCond(key) {
-  return (condOverrides[key] && condOverrides[key].fields) || CONDITION_DEFAULTS[key].fields;
+  return (
+    (condOverrides[key] && condOverrides[key].fields) ||
+    (sharedCond[key] && sharedCond[key].fields) ||
+    CONDITION_DEFAULTS[key].fields
+  );
 }
 
 // Populate the form from field data WITHOUT expanding macros (for editing).
@@ -1784,10 +1818,15 @@ function loadCondForEdit(key, label) {
   ed.classList.remove("hidden");
   document.getElementById("macro-hint").classList.remove("hidden");
   document.getElementById("tpl-name").classList.add("hidden");
-  document.querySelector("#save-template-editor .share-label").classList.add("hidden");
+  // Reuse the share checkbox as the scope: personal vs dept-wide (everyone).
+  document.querySelector("#save-template-editor .share-label").classList.remove("hidden");
+  document.getElementById("tpl-share-label").textContent = "Apply to everyone (dept)";
+  const shareCb = document.getElementById("tpl-share");
+  shareCb.disabled = false;
+  shareCb.checked = !!sharedCond[key]; // if a dept override exists, keep editing it
   document.getElementById("tpl-reset").classList.remove("hidden");
   document.getElementById("tpl-save-confirm").textContent = "Save changes to " + label;
-  setStatus(bedsideStatus, "Editing quick template “" + label + "” — edit the fields, then Save changes.", "ok");
+  setStatus(bedsideStatus, "Editing “" + label + "” — tick “Apply to everyone” to change it for all users, then Save.", "ok");
 }
 
 function renderQuickTemplates() {
@@ -1803,7 +1842,7 @@ function renderQuickTemplates() {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "chip cond";
-      btn.textContent = qt.label + (condOverrides[qt.key] ? " ✎" : "");
+      btn.textContent = qt.label + ((condOverrides[qt.key] || sharedCond[qt.key]) ? " ✎" : "");
       btn.addEventListener("click", () => {
         applyTemplateObj({ name: qt.label, fields: getCond(qt.key) });
       });

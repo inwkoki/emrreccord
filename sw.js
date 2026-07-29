@@ -1,6 +1,6 @@
 // ED QuickCapture service worker — offline support.
 // Bump CACHE when the shell changes so old caches are cleaned up.
-const CACHE = "edqc-v10";
+const CACHE = "edqc-v11";
 const SHELL = [
   "./",
   "./index.html",

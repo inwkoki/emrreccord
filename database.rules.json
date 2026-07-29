@@ -70,6 +70,20 @@
         "byUid":  { ".validate": "newData.isString() && newData.val().length <= 64" },
         "$other": { ".validate": false }
       }
+    },
+    "sharedCondOverrides": {
+      // Dept-wide overrides for the built-in quick (condition) templates.
+      // Any signed-in staff can edit them for everyone (matches the shared board).
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$key": {
+        "fields": {
+          "$f": { ".validate": "newData.isString() && newData.val().length <= 8000" }
+        },
+        "by":    { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "byUid": { ".validate": "newData.val() === auth.uid" },
+        "$other": { ".validate": false }
+      }
     }
   }
 }
