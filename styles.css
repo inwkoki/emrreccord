@@ -1521,3 +1521,14 @@ table.ref-table {
   background: var(--panel);
 }
 .custom-editor .chip { align-self: flex-start; }
+
+/* ---------- Inline chip rename ---------- */
+.chip-rename {
+  width: 130px;
+  max-width: 60vw;
+  font: inherit;
+  font-size: 12px;
+  padding: 1px 5px;
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+}

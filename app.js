@@ -87,6 +87,8 @@ const fOxygen = $("f-oxygen");
 const fManagement = $("f-management");
 const fAntibiotic = $("f-antibiotic");
 const fFluid = $("f-fluid");
+const fHomemed = $("f-homemed");
+const fImmun = $("f-immun");
 const fConsult = $("f-consult");
 const fDisposition = $("f-disposition");
 const sendBtn = $("send-btn");
@@ -124,7 +126,7 @@ let selectedId = null; // station: which patient is shown
 let encounters = {}; // id -> data
 const seenUpdatedAt = {}; // id -> last updatedAt (for flash detection)
 let customChips = {
-  ud: [], mgmt: [], abx: [], vaso: [], fluidtypes: [], neb: [],
+  ud: [], mgmt: [], abx: [], vaso: [], fluidtypes: [], neb: [], commonmed: [],
   ex0: [], ex1: [], ex2: [], ex3: [], ex4: [], ex5: [], ex6: [], // exam-builder per-system options
   hiddenQt: [], // quick-templates the user has hidden
 };
@@ -643,6 +645,8 @@ const FIELD_MAP = {
   bed: fBed,
   complaint: fComplaint,
   history: fHistory,
+  homemed: fHomemed,
+  immun: fImmun,
   vBp: vBp,
   vHr: vHr,
   vRr: vRr,
@@ -781,6 +785,38 @@ function renderExamOptChips(idx) {
     t.className = "lbl-txt";
     t.textContent = item;
     t.style.cursor = "default";
+    const ren = document.createElement("button");
+    ren.type = "button";
+    ren.className = "mv";
+    ren.textContent = "✎";
+    ren.title = "rename";
+    ren.style.display = "inline";
+    ren.addEventListener("click", () => {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "chip-rename";
+      input.value = customChips["ex" + idx][j];
+      let done = false;
+      const commit = () => {
+        if (done) return;
+        done = true;
+        const val = input.value.trim();
+        if (val && val !== customChips["ex" + idx][j]) {
+          customChips["ex" + idx][j] = val;
+          saveCustomChips("ex" + idx);
+          renderExamDatalist(idx);
+        }
+        renderExamOptChips(idx);
+      };
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); commit(); }
+        else if (e.key === "Escape") { done = true; renderExamOptChips(idx); }
+      });
+      input.addEventListener("blur", commit);
+      t.replaceWith(input);
+      input.focus();
+      input.select();
+    });
     const x = document.createElement("button");
     x.type = "button";
     x.className = "x";
@@ -792,7 +828,7 @@ function renderExamOptChips(idx) {
       renderExamOptChips(idx);
       renderExamDatalist(idx);
     });
-    chip.append(t, x);
+    chip.append(t, ren, x);
     container.appendChild(chip);
   });
 }
@@ -1154,12 +1190,22 @@ const FLUID_OPTIONS = [
   "5% Albumin",
 ];
 const DEFAULT_NEB = ["Salbutamol (Ventolin)", "Ipratropium (Atrovent)", "Berodual"];
+const DEFAULT_CMED = [
+  "Paracetamol", "Tramadol", "Morphine", "Pethidine", "Ketorolac", "Diclofenac",
+  "Ondansetron", "Metoclopramide (Plasil)", "Dimenhydrinate", "Domperidone",
+  "Dexamethasone", "Hydrocortisone", "Chlorpheniramine (CPM)", "Hydroxyzine",
+  "Omeprazole", "Pantoprazole", "Ranitidine", "Hyoscine (Buscopan)",
+  "Diazepam", "Midazolam", "Furosemide (Lasix)", "Tranexamic acid",
+  "Vitamin K", "Calcium gluconate", "MgSO4", "50% glucose", "Naloxone",
+  "Adrenaline", "Atropine",
+];
 
 // Select-backed med lists: the user's custom (favourite) items come first,
 // then the built-in defaults.
 const MED_SELECTS = {
   vaso: { el: document.getElementById("vaso-drug"), defaults: DEFAULT_VASO },
   fluidtypes: { el: document.getElementById("load-fluid"), defaults: DEFAULT_FLUIDS },
+  commonmed: { el: document.getElementById("cmed-drug"), defaults: DEFAULT_CMED },
 };
 
 function renderMedSelect(group) {
@@ -1176,15 +1222,23 @@ function renderMedSelect(group) {
   if (prev) cfg.el.value = prev;
 }
 
-// Antibiotic is a searchable input backed by a datalist.
+// Antibiotic is a native <select> (real dropdown — datalists misbehave on
+// some Android/Samsung keyboards, showing only in the suggestion strip).
 function renderAbxList() {
-  const dl = document.getElementById("abx-datalist");
-  dl.innerHTML = "";
+  const sel = document.getElementById("abx-drug");
+  const prev = sel.value;
+  sel.innerHTML = "";
+  const blank = document.createElement("option");
+  blank.value = "";
+  blank.textContent = "— antibiotic —";
+  sel.appendChild(blank);
   (customChips.abx || []).concat(DEFAULT_ABX).forEach((name) => {
     const o = document.createElement("option");
     o.value = name;
-    dl.appendChild(o);
+    o.textContent = name;
+    sel.appendChild(o);
   });
+  if (prev) sel.value = prev;
 }
 
 // Nebulization is checkbox-backed (multi-select).
@@ -1204,7 +1258,7 @@ function renderNeb() {
 }
 
 renderAbxList();
-["vaso", "fluidtypes"].forEach(renderMedSelect);
+["vaso", "fluidtypes", "commonmed"].forEach(renderMedSelect);
 renderNeb();
 
 document.getElementById("meds-toggle").addEventListener("click", () => {
@@ -1230,14 +1284,21 @@ function pressorFor(drugName) {
   return first ? PRESSORS.find((p) => p.name.toLowerCase().includes(first)) : null;
 }
 function updateVasoConc() {
-  const dl = document.getElementById("vaso-conc-list");
-  dl.innerHTML = "";
+  const sel = document.getElementById("vaso-conc");
+  const prev = sel.value;
+  sel.innerHTML = "";
+  const blank = document.createElement("option");
+  blank.value = "";
+  blank.textContent = "— concentration —";
+  sel.appendChild(blank);
   const p = pressorFor(document.getElementById("vaso-drug").value);
   (p ? p.preps : []).forEach((prep) => {
     const o = document.createElement("option");
     o.value = prep.label.replace(/\s{2,}/g, " ").trim();
-    dl.appendChild(o);
+    o.textContent = o.value;
+    sel.appendChild(o);
   });
+  if (prev) sel.value = prev;
 }
 document.getElementById("vaso-drug").addEventListener("change", updateVasoConc);
 updateVasoConc();
@@ -1274,6 +1335,26 @@ fluidTypeSel.addEventListener("change", () => {
   fFluid.value = cur ? cur + "; " + v + " " : v + " ";
   fluidTypeSel.value = "";
   fFluid.focus();
+});
+
+// Common medication → append to management (drug · dose · route · time)
+document.getElementById("cmed-add").addEventListener("click", () => {
+  const drug = document.getElementById("cmed-drug").value;
+  if (!drug) return;
+  const dose = document.getElementById("cmed-dose").value.trim();
+  const route = document.getElementById("cmed-route").value;
+  appendText(fManagement, "- " + drug + (dose ? " " + dose : "") + " " + route + " @ " + nowTime());
+  document.getElementById("cmed-dose").value = "";
+});
+
+// Immunization / vaccine quick chips → append (deduped) to the immun field.
+document.querySelectorAll("[data-immun]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const token = btn.dataset.immun;
+    const items = fImmun.value.split(";").map((s) => s.trim()).filter(Boolean);
+    if (!items.includes(token)) items.push(token);
+    fImmun.value = items.join("; ");
+  });
 });
 
 // IV fluid loading → append to fluid field
@@ -1376,6 +1457,38 @@ function renderCustomChips(group) {
       }
     });
 
+    const ren = document.createElement("button");
+    ren.type = "button";
+    ren.className = "mv";
+    ren.textContent = "✎";
+    ren.title = "rename";
+    ren.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "chip-rename";
+      input.value = customChips[group][i];
+      let done = false;
+      const commit = () => {
+        if (done) return;
+        done = true;
+        const val = input.value.trim();
+        if (val && val !== customChips[group][i]) {
+          customChips[group][i] = val;
+          saveCustomChips(group);
+        }
+        renderCustomChips(group);
+      };
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); commit(); }
+        else if (e.key === "Escape") { done = true; renderCustomChips(group); }
+      });
+      input.addEventListener("blur", commit);
+      t.replaceWith(input);
+      input.focus();
+      input.select();
+    });
+
     const x = document.createElement("button");
     x.type = "button";
     x.className = "x";
@@ -1387,7 +1500,7 @@ function renderCustomChips(group) {
       saveCustomChips(group);
       renderCustomChips(group);
     });
-    chip.append(t, up, down, x);
+    chip.append(t, ren, up, down, x);
     container.appendChild(chip);
   });
   if (group === "abx") renderAbxList();
@@ -1407,7 +1520,7 @@ function subscribeCustomChips() {
   chipsSubscribed = true;
   onValue(ref(db, "users/" + uid + "/chips"), (snap) => {
     const v = snap.val() || {};
-    ["ud", "mgmt", "abx", "vaso", "fluidtypes", "neb",
+    ["ud", "mgmt", "abx", "vaso", "fluidtypes", "neb", "commonmed",
      "ex0", "ex1", "ex2", "ex3", "ex4", "ex5", "ex6", "hiddenQt"].forEach((g) => {
       customChips[g] = v[g] ? Object.values(v[g]) : [];
       renderCustomChips(g);
@@ -1889,6 +2002,8 @@ function formatNote(e) {
   parts.push("PATIENT: " + (e.bed || "(no bed)"));
   if (e.complaint) parts.push("\nCHIEF COMPLAINT:\n" + e.complaint);
   if (e.history) parts.push("\nHISTORY:\n" + e.history);
+  if (e.homemed) parts.push("\nHOME MEDICATION:\n" + e.homemed);
+  if (e.immun) parts.push("\nIMMUNIZATION / VACCINE:\n" + e.immun);
 
   const vit = vitalsLine(e);
   if (vit) parts.push("\nVITALS:\n" + vit);

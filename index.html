@@ -163,6 +163,24 @@
         </div>
         <textarea id="f-history" rows="3" placeholder="Onset, associated sx, past history, meds, allergies…"></textarea>
 
+        <label class="lbl">Home medication</label>
+        <input id="f-homemed" type="text" placeholder="current home meds…" maxlength="200" />
+
+        <label class="lbl">Immunization / vaccine</label>
+        <div class="chip-row" id="immun-chips">
+          <button type="button" class="chip mini" data-immun="Tetanus (Td/Tdap) booster given">TT booster</button>
+          <button type="button" class="chip mini" data-immun="Tetanus primary course started">TT course</button>
+          <button type="button" class="chip mini" data-immun="TIG given">TIG</button>
+          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D0">Rabies D0</button>
+          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D3">D3</button>
+          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D7">D7</button>
+          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D14">D14</button>
+          <button type="button" class="chip mini" data-immun="Rabies (Speeda) D28">D28</button>
+          <button type="button" class="chip mini" data-immun="Rabies booster (D0, D3)">Rabies booster</button>
+          <button type="button" class="chip mini" data-immun="RIG (ERIG/HRIG) given">RIG</button>
+        </div>
+        <input id="f-immun" type="text" placeholder="tetanus / rabies (Speeda) — course · booster · dates" maxlength="200" />
+
         <!-- Vital signs -->
         <label class="lbl">Vital signs</label>
         <div class="vitals-grid">
@@ -235,14 +253,33 @@
 
         <button type="button" id="meds-toggle" class="chip">💊 Meds builder</button>
         <div class="meds-builder hidden" id="meds-builder">
+          <!-- Common medication -->
+          <div class="med-block">
+            <div class="med-title">Common medication
+              <button type="button" class="chip mini edit" data-edit="commonmed" title="Edit my med list">✏️</button>
+            </div>
+            <div class="med-controls">
+              <select id="cmed-drug"></select>
+              <input id="cmed-dose" type="text" placeholder="dose e.g. 500 mg" maxlength="30" />
+              <select id="cmed-route">
+                <option>IV</option><option>IM</option><option>PO</option><option>SC</option><option>PR</option><option>neb</option>
+              </select>
+              <button type="button" class="chip mini eb-insert" id="cmed-add">＋ Add</button>
+            </div>
+            <div class="chip-row" id="commonmed-chips"><span class="custom-chips"></span></div>
+            <div class="chip-editor hidden" id="commonmed-editor">
+              <input type="text" placeholder="Add med to my list…" maxlength="40" autocomplete="off" />
+              <button type="button" class="chip mini" data-additem="commonmed">＋ Add to list</button>
+            </div>
+          </div>
+
           <!-- Antibiotic -->
           <div class="med-block">
             <div class="med-title">Antibiotic
               <button type="button" class="chip mini edit" data-edit="abx" title="Edit my antibiotic list">✏️</button>
             </div>
             <div class="med-controls">
-              <input id="abx-drug" list="abx-datalist" type="text" placeholder="type to search…" autocomplete="off" maxlength="40" />
-              <datalist id="abx-datalist"></datalist>
+              <select id="abx-drug"></select>
               <input id="abx-dose" type="text" placeholder="dose e.g. 2 g" maxlength="30" />
               <select id="abx-route">
                 <option>IV</option><option>IV drip</option><option>IM</option><option>PO</option><option>PR</option>
@@ -263,8 +300,7 @@
             </div>
             <div class="med-controls">
               <select id="vaso-drug"></select>
-              <input id="vaso-conc" list="vaso-conc-list" type="text" placeholder="concentration (pick or type)" maxlength="40" autocomplete="off" />
-              <datalist id="vaso-conc-list"></datalist>
+              <select id="vaso-conc"></select>
               <input id="vaso-rate" type="text" placeholder="rate e.g. 0.1 mcg/kg/min" maxlength="30" />
               <button type="button" class="chip mini eb-insert" id="vaso-add">＋ Add</button>
             </div>
