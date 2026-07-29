@@ -263,6 +263,8 @@
             </div>
             <div class="med-controls">
               <select id="vaso-drug"></select>
+              <input id="vaso-conc" list="vaso-conc-list" type="text" placeholder="concentration (pick or type)" maxlength="40" autocomplete="off" />
+              <datalist id="vaso-conc-list"></datalist>
               <input id="vaso-rate" type="text" placeholder="rate e.g. 0.1 mcg/kg/min" maxlength="30" />
               <button type="button" class="chip mini eb-insert" id="vaso-add">＋ Add</button>
             </div>
@@ -318,6 +320,7 @@
           <button type="button" class="chip mini" data-fluid="Acetar / RLS 1000 ml IV">RLS</button>
           <button type="button" class="chip mini" data-fluid="NSS 30 ml/kg IV bolus, reassess">Bolus</button>
         </label>
+        <select id="fluid-type"></select>
         <input id="f-fluid" type="text" placeholder="fluid type · volume · rate" maxlength="120" />
 
         <label class="lbl">Consultation</label>

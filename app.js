@@ -1137,7 +1137,22 @@ const DEFAULT_ABX = [
   "Doxycycline", "Cloxacillin",
 ];
 const DEFAULT_VASO = ["Norepinephrine", "Adrenaline", "Dopamine", "Dobutamine", "Vasopressin", "Phenylephrine"];
-const DEFAULT_FLUIDS = ["NSS", "Acetar", "RLS", "DNSS", "D5W"];
+const DEFAULT_FLUIDS = ["NSS", "RLS", "Acetar", "D5W", "D5S", "D5N/2", "DNSS", "D5LR", "Plasma-Lyte", "3% NaCl", "Sterofundin"];
+// Specific IV fluids for the "IV fluid" picker (descriptive names).
+const FLUID_OPTIONS = [
+  "0.9% NaCl (NSS)",
+  "Ringer's lactate (RLS / Hartmann)",
+  "Acetar (balanced)",
+  "D5W",
+  "D5/0.9% NaCl (D5S)",
+  "D5/0.45% NaCl (D5 N/2)",
+  "D5/0.225% NaCl (D5 N/5)",
+  "DNSS (D5 + NSS)",
+  "D5 Ringer's lactate (D5LR)",
+  "Plasma-Lyte / Sterofundin (balanced)",
+  "3% NaCl (hypertonic)",
+  "5% Albumin",
+];
 const DEFAULT_NEB = ["Salbutamol (Ventolin)", "Ipratropium (Atrovent)", "Berodual"];
 
 // Select-backed med lists: the user's custom (favourite) items come first,
@@ -1209,12 +1224,56 @@ document.getElementById("abx-add").addEventListener("click", () => {
   document.getElementById("abx-dose").value = "";
 });
 
-// Vasopressor → append to management
+// Vasopressor concentration suggestions come from the drip-calculator preps.
+function pressorFor(drugName) {
+  const first = (drugName || "").split(/[\s(/]/)[0].toLowerCase();
+  return first ? PRESSORS.find((p) => p.name.toLowerCase().includes(first)) : null;
+}
+function updateVasoConc() {
+  const dl = document.getElementById("vaso-conc-list");
+  dl.innerHTML = "";
+  const p = pressorFor(document.getElementById("vaso-drug").value);
+  (p ? p.preps : []).forEach((prep) => {
+    const o = document.createElement("option");
+    o.value = prep.label.replace(/\s{2,}/g, " ").trim();
+    dl.appendChild(o);
+  });
+}
+document.getElementById("vaso-drug").addEventListener("change", updateVasoConc);
+updateVasoConc();
+
+// Vasopressor → append to management (drug · concentration · rate)
 document.getElementById("vaso-add").addEventListener("click", () => {
   const drug = document.getElementById("vaso-drug").value;
+  const conc = document.getElementById("vaso-conc").value.trim();
   const rate = document.getElementById("vaso-rate").value.trim();
-  appendText(fManagement, "- Vasopressor: " + drug + (rate ? " " + rate : "") + " (started " + nowTime() + ")");
+  appendText(
+    fManagement,
+    "- Vasopressor: " + drug + (conc ? " " + conc : "") + (rate ? " @ " + rate : "") + " (started " + nowTime() + ")"
+  );
+  document.getElementById("vaso-conc").value = "";
   document.getElementById("vaso-rate").value = "";
+});
+
+// Specific IV-fluid picker → append the chosen fluid into the IV fluid field.
+const fluidTypeSel = document.getElementById("fluid-type");
+const ftBlank = document.createElement("option");
+ftBlank.value = "";
+ftBlank.textContent = "— pick a specific fluid —";
+fluidTypeSel.appendChild(ftBlank);
+FLUID_OPTIONS.forEach((name) => {
+  const o = document.createElement("option");
+  o.value = name;
+  o.textContent = name;
+  fluidTypeSel.appendChild(o);
+});
+fluidTypeSel.addEventListener("change", () => {
+  const v = fluidTypeSel.value;
+  if (!v) return;
+  const cur = fFluid.value.trim();
+  fFluid.value = cur ? cur + "; " + v + " " : v + " ";
+  fluidTypeSel.value = "";
+  fFluid.focus();
 });
 
 // IV fluid loading → append to fluid field
